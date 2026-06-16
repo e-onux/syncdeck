@@ -44,6 +44,7 @@ jobs:
       - run: npm run ${{ matrix.build_script }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RCLONE_TARGETS: ${{ matrix.rclone_targets }}
       - uses: actions/upload-artifact@v4
         with:
           name: syncdeck-${{ matrix.name }}
