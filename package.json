@@ -1,9 +1,12 @@
 {
   "name": "syncdeck",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A cross-platform graphical wrapper for rclone.",
-  "author": "e-onux",
+  "author": {
+    "name": "e-onux",
+    "email": "e-onux@users.noreply.github.com"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
