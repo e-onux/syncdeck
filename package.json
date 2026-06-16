@@ -1,0 +1,88 @@
+{
+  "name": "syncdeck",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A cross-platform graphical wrapper for rclone.",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "electron": "electron .",
+    "build": "tsc -b && vite build",
+    "download:rclone": "node scripts/download-rclone.cjs",
+    "bundle": "npm run download:rclone && npm run build && electron-builder --publish never",
+    "bundle:mac": "npm run download:rclone && npm run build && electron-builder --mac --publish never",
+    "bundle:win": "npm run download:rclone && npm run build && electron-builder --win --publish never",
+    "bundle:linux": "npm run download:rclone && npm run build && electron-builder --linux --publish never",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.emironuk.syncdeck",
+    "productName": "SyncDeck",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "dependencies": {
+    "@ionic/react": "^8.8.10",
+    "@ionic/react-router": "^8.8.10",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.4.0",
+    "ionicons": "^8.0.13",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "wait-on": "^9.0.10"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "adm-zip": "^0.5.17",
+    "electron-builder": "^26.15.3",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12"
+  }
+}

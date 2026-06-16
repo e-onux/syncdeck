@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac
+            os: macos-latest
+            rclone_targets: darwin-x64,darwin-arm64
+            build_script: bundle:mac
+          - name: windows
+            os: windows-latest
+            rclone_targets: win32-x64,win32-arm64
+            build_script: bundle:win
+          - name: linux
+            os: ubuntu-latest
+            rclone_targets: linux-x64,linux-arm64
+            build_script: bundle:linux
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run download:rclone
+        env:
+          RCLONE_TARGETS: ${{ matrix.rclone_targets }}
+      - run: npm run build
+      - run: npm run ${{ matrix.build_script }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: syncdeck-${{ matrix.name }}
+          path: |
+            release/**
+            !release/**/*.blockmap
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
