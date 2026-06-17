@@ -13,12 +13,10 @@ resources:
   - service.yaml
   - ingress.yaml
 
-# Pin the deployed image to an immutable tag per release, e.g.:
-#   images:
-#     - name: syncdeck-web
-#       newName: registry.sidrelabs.com/syncdeck-web
-#       newTag: "2026-06-17"
+# Image is built locally and imported straight into k3s containerd
+# (docker save | k3s ctr images import) — no registry, matching how the main
+# sidrelabs-web image is loaded. imagePullPolicy is IfNotPresent. Bump the tag
+# per release and re-import.
 images:
   - name: syncdeck-web
-    newName: registry.sidrelabs.com/syncdeck-web
-    newTag: "2026-06-17"
+    newTag: "1"
