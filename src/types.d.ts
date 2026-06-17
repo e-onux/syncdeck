@@ -33,6 +33,10 @@ export type RemoteDraft = {
   type: string;
   clientId?: string;
   clientSecret?: string;
+  options?: Array<{
+    key: string;
+    value: string;
+  }>;
   extraArgs?: string;
 };
 

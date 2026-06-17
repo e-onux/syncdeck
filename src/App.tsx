@@ -4,15 +4,20 @@ import {
   add,
   close,
   cloudUploadOutline,
+  colorPaletteOutline,
   folderOpenOutline,
   informationCircleOutline,
+  keyOutline,
   languageOutline,
   play,
   refresh,
   serverOutline,
   save,
   search,
+  settingsOutline,
+  shieldCheckmarkOutline,
   syncOutline,
+  terminalOutline,
   trash,
   warning,
 } from 'ionicons/icons'
@@ -89,6 +94,7 @@ const accents = {
 
 type AccentName = keyof typeof accents
 const emptyProfiles: SyncProfile[] = []
+type SettingsTab = 'appearance' | 'clients' | 'about'
 
 const languages = ['en', 'es', 'de', 'nl', 'zh', 'tr', 'ja', 'ar', 'ru'] as const
 type Language = (typeof languages)[number]
@@ -127,12 +133,24 @@ const copy = {
     extraArgs: 'Extra engine arguments',
     appearance: 'Appearance',
     clients: 'Clients',
+    settings: 'Settings',
+    interface: 'Interface',
     addClient: 'Add client',
+    openClientSettings: 'Add or manage clients',
+    selectClient: 'Select client',
+    remotePath: 'Remote path',
     remoteName: 'Remote name',
     remoteType: 'Type',
     clientId: 'Client ID',
     clientSecret: 'Client secret',
+    provider: 'Provider',
+    auth: 'Authentication',
+    commandOptions: 'Command options',
+    optionKey: 'Option key',
+    optionValue: 'Value',
+    addOption: 'Add option',
     existingClients: 'Configured clients',
+    noClients: 'No clients yet. Add a client from Settings.',
     lastRun: 'Last run',
     noRecord: 'No record',
     success: 'Successful',
@@ -141,6 +159,7 @@ const copy = {
     noRun: 'No run record yet. Use "Run now" to test the profile.',
     deleteProfile: 'Delete profile',
     about: 'About',
+    appVersion: 'Standalone sync app',
     wrapperNote: 'SyncDeck is a graphical wrapper for rclone. rclone is an independent open-source project by its maintainers.',
   },
   tr: {
@@ -176,12 +195,24 @@ const copy = {
     extraArgs: 'Ek motor argümanları',
     appearance: 'Görünüm',
     clients: 'Clientlar',
+    settings: 'Ayarlar',
+    interface: 'Arayüz',
     addClient: 'Client ekle',
+    openClientSettings: 'Client ekle veya yönet',
+    selectClient: 'Client seç',
+    remotePath: 'Remote yolu',
     remoteName: 'Remote adı',
     remoteType: 'Tip',
     clientId: 'Client ID',
     clientSecret: 'Client secret',
+    provider: 'Sağlayıcı',
+    auth: 'Kimlik doğrulama',
+    commandOptions: 'Komut seçenekleri',
+    optionKey: 'Seçenek anahtarı',
+    optionValue: 'Değer',
+    addOption: 'Seçenek ekle',
     existingClients: 'Tanımlı clientlar',
+    noClients: 'Henüz client yok. Ayarlardan client ekle.',
     lastRun: 'Son çalışma',
     noRecord: 'Kayıt yok',
     success: 'Başarılı',
@@ -190,6 +221,7 @@ const copy = {
     noRun: 'Henüz çalışma kaydı yok. "Şimdi çalıştır" ile profili test edebilirsin.',
     deleteProfile: 'Profili sil',
     about: 'Hakkında',
+    appVersion: 'Standalone senkron uygulaması',
     wrapperNote: 'SyncDeck, rclone için grafik arayüzlü bir wrapper’dır. rclone, kendi geliştiricileri tarafından sürdürülen bağımsız açık kaynak projedir.',
   },
 }
@@ -208,6 +240,31 @@ const translations: Record<Language, typeof copy.en> = {
 
 const remoteTypes = ['drive', 'dropbox', 'onedrive', 's3', 'b2', 'sftp', 'local']
 
+const providerHints: Record<string, Array<{ key: string; label: string; placeholder: string }>> = {
+  drive: [
+    { key: 'scope', label: 'Scope', placeholder: 'drive' },
+    { key: 'root_folder_id', label: 'Root folder ID', placeholder: 'optional' },
+    { key: 'team_drive', label: 'Shared drive ID', placeholder: 'optional' },
+  ],
+  s3: [
+    { key: 'provider', label: 'Provider', placeholder: 'AWS' },
+    { key: 'access_key_id', label: 'Access key ID', placeholder: 'AKIA...' },
+    { key: 'secret_access_key', label: 'Secret access key', placeholder: 'secret' },
+    { key: 'region', label: 'Region', placeholder: 'eu-central-1' },
+  ],
+  sftp: [
+    { key: 'host', label: 'Host', placeholder: 'example.com' },
+    { key: 'user', label: 'User', placeholder: 'username' },
+    { key: 'port', label: 'Port', placeholder: '22' },
+    { key: 'key_file', label: 'Key file', placeholder: '/Users/me/.ssh/id_rsa' },
+  ],
+  b2: [
+    { key: 'account', label: 'Account ID', placeholder: 'account id' },
+    { key: 'key', label: 'Application key', placeholder: 'application key' },
+  ],
+  onedrive: [{ key: 'drive_type', label: 'Drive type', placeholder: 'personal | business' }],
+}
+
 function shortPath(path: string) {
   if (!path) return ''
   const parts = path.split('/').filter(Boolean)
@@ -224,6 +281,19 @@ function formatRunTime(value?: string) {
   })}`
 }
 
+function splitRemoteDestination(destination: string, remotes: string[]) {
+  const remote = remotes.find((item) => destination.startsWith(item))
+  return {
+    remote: remote || '',
+    path: remote ? destination.slice(remote.length) : destination,
+  }
+}
+
+function buildRemoteDestination(remote: string, remotePath: string) {
+  if (!remote) return remotePath
+  return `${remote}${remotePath.replace(/^\/+/, '')}`
+}
+
 function App() {
   const [state, setState] = useState<AppState | null>(null)
   const [draft, setDraft] = useState<SyncProfile>(emptyProfile)
@@ -233,11 +303,14 @@ function App() {
   const [query, setQuery] = useState('')
   const [accentName, setAccentName] = useState<AccentName>('Mavi')
   const [language, setLanguage] = useState<Language>('tr')
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('appearance')
   const [remoteDraft, setRemoteDraft] = useState<RemoteDraft>({
     name: '',
     type: 'drive',
     clientId: '',
     clientSecret: '',
+    options: [],
     extraArgs: '',
   })
 
@@ -247,6 +320,8 @@ function App() {
   const selectedRun = selectedId && state ? state.lastRun[selectedId] : null
   const canSave = Boolean(draft.name.trim() && draft.source.trim() && draft.destination.trim())
   const activeCount = profiles.filter((profile) => profile.enabled).length
+  const remotes = state?.remotes ?? []
+  const destinationParts = splitRemoteDestination(draft.destination, remotes)
 
   const filteredProfiles = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase('tr-TR')
@@ -359,7 +434,7 @@ function App() {
     setError(null)
     try {
       setState(await api.createRemote(remoteDraft))
-      setRemoteDraft({ name: '', type: 'drive', clientId: '', clientSecret: '', extraArgs: '' })
+      setRemoteDraft({ name: '', type: 'drive', clientId: '', clientSecret: '', options: [], extraArgs: '' })
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -380,6 +455,48 @@ function App() {
 
   function setMode(mode: SyncMode) {
     setDraft((current) => ({ ...current, mode }))
+  }
+
+  function openSettings(tab: SettingsTab = 'appearance') {
+    setSettingsTab(tab)
+    setSettingsOpen(true)
+  }
+
+  function setDestinationRemote(remote: string) {
+    setDraft((current) => ({
+      ...current,
+      destination: buildRemoteDestination(remote, splitRemoteDestination(current.destination, remotes).path),
+    }))
+  }
+
+  function setDestinationPath(remotePath: string) {
+    setDraft((current) => ({
+      ...current,
+      destination: buildRemoteDestination(splitRemoteDestination(current.destination, remotes).remote, remotePath),
+    }))
+  }
+
+  function setRemoteOption(index: number, field: 'key' | 'value', value: string) {
+    setRemoteDraft((current) => ({
+      ...current,
+      options: (current.options || []).map((option, optionIndex) =>
+        optionIndex === index ? { ...option, [field]: value } : option,
+      ),
+    }))
+  }
+
+  function addRemoteOption(key = '', value = '') {
+    setRemoteDraft((current) => ({
+      ...current,
+      options: [...(current.options || []), { key, value }],
+    }))
+  }
+
+  function removeRemoteOption(index: number) {
+    setRemoteDraft((current) => ({
+      ...current,
+      options: (current.options || []).filter((_option, optionIndex) => optionIndex !== index),
+    }))
   }
 
   if (state && !state.rclonePath) {
@@ -488,8 +605,8 @@ function App() {
                   <IonIcon icon={save} />
                   {t.save}
                 </button>
-                <button className="toolbar-button icon-only" onClick={() => api.openAbout()} aria-label={t.about}>
-                  <IonIcon icon={informationCircleOutline} />
+                <button className="toolbar-button icon-only" onClick={() => openSettings()} aria-label={t.settings}>
+                  <IonIcon icon={settingsOutline} />
                 </button>
               </div>
             </header>
@@ -577,12 +694,32 @@ function App() {
                       <IonIcon icon={folderOpenOutline} />
                       <div className="row-copy">
                         <small>{t.destination}</small>
-                        <span className={draft.destination ? '' : 'muted'}>
-                          {draft.destination || t.noFolder}
-                        </span>
+                        {remotes.length > 0 ? (
+                          <div className="destination-controls">
+                            <select
+                              value={destinationParts.remote}
+                              onChange={(event) => setDestinationRemote(event.target.value)}
+                              aria-label={t.selectClient}
+                            >
+                              <option value="">{t.selectClient}</option>
+                              {remotes.map((remote) => (
+                                <option key={remote} value={remote}>
+                                  {remote}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              value={destinationParts.path}
+                              onChange={(event) => setDestinationPath(event.target.value)}
+                              placeholder={t.remotePath}
+                            />
+                          </div>
+                        ) : (
+                          <span className="muted">{t.noClients}</span>
+                        )}
                       </div>
-                      <button className="small-button" onClick={() => choosePath('destination')}>
-                        {t.change}
+                      <button className="small-button" onClick={() => openSettings('clients')}>
+                        {t.openClientSettings}
                       </button>
                     </div>
                   </div>
@@ -621,87 +758,6 @@ function App() {
                 </section>
 
                 <section className="setting-group">
-                  <h2>{t.appearance}</h2>
-                  <div className="group-card padded">
-                    <label className="select-line">
-                      <span>
-                        <IonIcon icon={languageOutline} />
-                        Language
-                      </span>
-                      <select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
-                        {languages.map((item) => (
-                          <option key={item} value={item}>
-                            {item.toUpperCase()}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="accent-picker">
-                      {(Object.keys(accents) as AccentName[]).map((name) => (
-                        <button
-                          key={name}
-                          className={name === accentName ? 'active' : ''}
-                          onClick={() => setAccentName(name)}
-                        >
-                          <span style={{ background: accents[name] }} />
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
-                <section className="setting-group">
-                  <h2>{t.clients}</h2>
-                  <div className="group-card padded">
-                    <div className="remote-grid">
-                      <input
-                        value={remoteDraft.name}
-                        onChange={(event) => setRemoteDraft({ ...remoteDraft, name: event.target.value })}
-                        placeholder={t.remoteName}
-                      />
-                      <select
-                        value={remoteDraft.type}
-                        onChange={(event) => setRemoteDraft({ ...remoteDraft, type: event.target.value })}
-                      >
-                        {remoteTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        value={remoteDraft.clientId}
-                        onChange={(event) => setRemoteDraft({ ...remoteDraft, clientId: event.target.value })}
-                        placeholder={t.clientId}
-                      />
-                      <input
-                        type="password"
-                        value={remoteDraft.clientSecret}
-                        onChange={(event) => setRemoteDraft({ ...remoteDraft, clientSecret: event.target.value })}
-                        placeholder={t.clientSecret}
-                      />
-                    </div>
-                    <textarea
-                      className="remote-extra"
-                      value={remoteDraft.extraArgs}
-                      onChange={(event) => setRemoteDraft({ ...remoteDraft, extraArgs: event.target.value })}
-                      placeholder="scope drive config_is_local false"
-                    />
-                    <div className="remote-footer">
-                      <div>
-                        <strong>{t.existingClients}</strong>
-                        <span>{state?.remotes?.join('  ') || '—'}</span>
-                      </div>
-                      <button className="primary-button" disabled={busy === 'remote'} onClick={createRemote}>
-                        <IonIcon icon={serverOutline} />
-                        {t.addClient}
-                      </button>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="setting-group">
                   <div className="section-title-row">
                     <h2>{t.lastRun}</h2>
                     <span className={`run-badge ${selectedRun ? (selectedRun.ok ? 'ok' : 'danger') : ''}`}>
@@ -731,6 +787,221 @@ function App() {
             </div>
           </section>
         </section>
+
+        {settingsOpen && (
+          <div className="settings-overlay" role="presentation">
+            <section className="settings-window" role="dialog" aria-modal="true" aria-label={t.settings}>
+              <header className="settings-header">
+                <strong>{t.settings}</strong>
+                <button className="toolbar-button icon-only" onClick={() => setSettingsOpen(false)} aria-label="Kapat">
+                  <IonIcon icon={close} />
+                </button>
+              </header>
+
+              <div className="settings-layout">
+                <nav className="settings-tabs" aria-label={t.settings}>
+                  <button
+                    className={settingsTab === 'appearance' ? 'active' : ''}
+                    onClick={() => setSettingsTab('appearance')}
+                  >
+                    <IonIcon icon={colorPaletteOutline} />
+                    <span>{t.interface}</span>
+                  </button>
+                  <button
+                    className={settingsTab === 'clients' ? 'active' : ''}
+                    onClick={() => setSettingsTab('clients')}
+                  >
+                    <IonIcon icon={serverOutline} />
+                    <span>{t.clients}</span>
+                  </button>
+                  <button
+                    className={settingsTab === 'about' ? 'active' : ''}
+                    onClick={() => setSettingsTab('about')}
+                  >
+                    <IonIcon icon={informationCircleOutline} />
+                    <span>{t.about}</span>
+                  </button>
+                </nav>
+
+                <div className="settings-panel">
+                  {settingsTab === 'appearance' && (
+                    <section className="setting-group">
+                      <h2>{t.appearance}</h2>
+                      <div className="group-card padded">
+                        <label className="select-line">
+                          <span>
+                            <IonIcon icon={languageOutline} />
+                            Language
+                          </span>
+                          <select value={language} onChange={(event) => setLanguage(event.target.value as Language)}>
+                            {languages.map((item) => (
+                              <option key={item} value={item}>
+                                {item.toUpperCase()}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <div className="accent-picker">
+                          {(Object.keys(accents) as AccentName[]).map((name) => (
+                            <button
+                              key={name}
+                              className={name === accentName ? 'active' : ''}
+                              onClick={() => setAccentName(name)}
+                            >
+                              <span style={{ background: accents[name] }} />
+                              {name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {settingsTab === 'clients' && (
+                    <section className="setting-group">
+                      <h2>{t.clients}</h2>
+                      <div className="client-wizard">
+                        <div className="wizard-column">
+                          <div className="wizard-step">
+                            <span className="step-icon">
+                              <IonIcon icon={serverOutline} />
+                            </span>
+                            <div>
+                              <strong>{t.provider}</strong>
+                              <div className="remote-grid">
+                                <input
+                                  value={remoteDraft.name}
+                                  onChange={(event) => setRemoteDraft({ ...remoteDraft, name: event.target.value })}
+                                  placeholder={t.remoteName}
+                                />
+                                <select
+                                  value={remoteDraft.type}
+                                  onChange={(event) =>
+                                    setRemoteDraft({ ...remoteDraft, type: event.target.value, options: [] })
+                                  }
+                                >
+                                  {remoteTypes.map((type) => (
+                                    <option key={type} value={type}>
+                                      {type}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="wizard-step">
+                            <span className="step-icon">
+                              <IonIcon icon={keyOutline} />
+                            </span>
+                            <div>
+                              <strong>{t.auth}</strong>
+                              <div className="remote-grid">
+                                <input
+                                  value={remoteDraft.clientId}
+                                  onChange={(event) => setRemoteDraft({ ...remoteDraft, clientId: event.target.value })}
+                                  placeholder={t.clientId}
+                                />
+                                <input
+                                  type="password"
+                                  value={remoteDraft.clientSecret}
+                                  onChange={(event) =>
+                                    setRemoteDraft({ ...remoteDraft, clientSecret: event.target.value })
+                                  }
+                                  placeholder={t.clientSecret}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="wizard-step">
+                            <span className="step-icon">
+                              <IonIcon icon={terminalOutline} />
+                            </span>
+                            <div>
+                              <strong>{t.commandOptions}</strong>
+                              <div className="preset-list">
+                                {(providerHints[remoteDraft.type] || []).map((hint) => (
+                                  <button key={hint.key} onClick={() => addRemoteOption(hint.key, '')}>
+                                    {hint.label}
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="option-list">
+                                {(remoteDraft.options || []).map((option, index) => (
+                                  <div className="option-row" key={`${option.key}-${index}`}>
+                                    <input
+                                      value={option.key}
+                                      onChange={(event) => setRemoteOption(index, 'key', event.target.value)}
+                                      placeholder={t.optionKey}
+                                    />
+                                    <input
+                                      value={option.value}
+                                      onChange={(event) => setRemoteOption(index, 'value', event.target.value)}
+                                      placeholder={
+                                        providerHints[remoteDraft.type]?.find((hint) => hint.key === option.key)
+                                          ?.placeholder || t.optionValue
+                                      }
+                                    />
+                                    <button className="toolbar-button icon-only" onClick={() => removeRemoteOption(index)}>
+                                      <IonIcon icon={trash} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button className="small-button" onClick={() => addRemoteOption()}>
+                                <IonIcon icon={add} />
+                                {t.addOption}
+                              </button>
+                              <textarea
+                                className="remote-extra"
+                                value={remoteDraft.extraArgs}
+                                onChange={(event) => setRemoteDraft({ ...remoteDraft, extraArgs: event.target.value })}
+                                placeholder="scope drive config_is_local false"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <aside className="client-summary">
+                          <strong>{t.existingClients}</strong>
+                          <div className="remote-chip-list">
+                            {remotes.length > 0
+                              ? remotes.map((remote) => <span key={remote}>{remote}</span>)
+                              : <small>{t.noClients}</small>}
+                          </div>
+                          <button className="primary-button" disabled={busy === 'remote'} onClick={createRemote}>
+                            <IonIcon icon={serverOutline} />
+                            {t.addClient}
+                          </button>
+                        </aside>
+                      </div>
+                    </section>
+                  )}
+
+                  {settingsTab === 'about' && (
+                    <section className="setting-group">
+                      <h2>{t.about}</h2>
+                      <div className="about-panel">
+                        <div className="app-icon large">
+                          <IonIcon icon={syncOutline} />
+                        </div>
+                        <div>
+                          <h3>{appName}</h3>
+                          <p>{t.appVersion}</p>
+                        </div>
+                        <div className="about-callout">
+                          <IonIcon icon={shieldCheckmarkOutline} />
+                          <p>{t.wrapperNote}</p>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
       </main>
     </IonApp>
   )
