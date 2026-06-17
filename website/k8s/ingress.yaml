@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: syncdeck-web
+  annotations:
+    # K3s + Traefik with the built-in Let's Encrypt resolver ("le"),
+    # matching the rest of the cluster's ingresses (same as sidrelabs-web).
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
+spec:
+  ingressClassName: traefik
+  rules:
+    # Shares the sidrelabs.com host with the main site. Traefik prioritises the
+    # longer path prefix, so /syncdeck -> syncdeck-web while / -> sidrelabs-web.
+    - host: sidrelabs.com
+      http:
+        paths:
+          - path: /syncdeck
+            pathType: Prefix
+            backend:
+              service:
+                name: syncdeck-web
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - sidrelabs.com
