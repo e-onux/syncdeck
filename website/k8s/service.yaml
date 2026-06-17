@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: syncdeck-web
+  labels:
+    app: syncdeck-web
+spec:
+  type: ClusterIP
+  selector:
+    app: syncdeck-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
