@@ -17,6 +17,11 @@ export type RunRecord = {
   finishedAt: string;
 };
 
+export type RemoteClient = {
+  name: string;
+  type: string;
+};
+
 export type AppState = {
   launchAtLogin: boolean;
   profiles: SyncProfile[];
@@ -26,6 +31,7 @@ export type AppState = {
   launchAgentPath: string;
   platform?: string;
   remotes?: string[];
+  clients?: RemoteClient[];
 };
 
 export type RemoteDraft = {
@@ -40,6 +46,22 @@ export type RemoteDraft = {
   extraArgs?: string;
 };
 
+export type RemoteEntry = {
+  name: string;
+  isDir: boolean;
+  size: number;
+};
+
+export type SyncProgress = {
+  id: string;
+  running: boolean;
+  pct?: number;
+  speed?: string;
+  eta?: string;
+  transferred?: string;
+  total?: string;
+};
+
 declare global {
   interface Window {
     rcloneSyncer: {
@@ -50,7 +72,10 @@ declare global {
       runSync: (id: string) => Promise<AppState>;
       setLaunchAtLogin: (enabled: boolean) => Promise<AppState>;
       createRemote: (remote: RemoteDraft) => Promise<AppState>;
+      listRemote: (remotePath: string) => Promise<RemoteEntry[]>;
+      openExternal: (url: string) => Promise<void>;
       openAbout: () => Promise<void>;
+      onSyncProgress: (callback: (data: SyncProgress) => void) => () => void;
     };
   }
 }

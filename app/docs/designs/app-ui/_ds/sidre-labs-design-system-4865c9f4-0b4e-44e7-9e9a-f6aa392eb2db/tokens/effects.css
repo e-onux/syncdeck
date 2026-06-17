@@ -1,0 +1,39 @@
+/* ============================================================
+   SIDRE LABS — Effects: shadows, glows, motion, texture
+   No drop shadows on the dark canvas — depth comes from
+   surface lightness + hairlines. Emphasis comes from a mint
+   focus glow ring. Motion is calm: fade + rise, snappy ease.
+   ============================================================ */
+:root {
+  /* ---- glow / focus (mint ring, replaces drop shadow) ---- */
+  --glow-accent: 0 0 0 4px color-mix(in oklch, var(--accent) 18%, transparent);
+  --glow-focus:  0 0 0 3px color-mix(in oklch, var(--accent) 45%, transparent);
+
+  /* depth for the rare elevated panel on lighter surfaces */
+  --shadow-panel: 0 24px 60px -30px oklch(0.08 0.02 172 / 0.7);
+
+  /* ---- motion ---- */
+  --ease-out:   cubic-bezier(.2, .7, .2, 1); /* signature snappy decel @kind other */
+  --ease-std:   ease;                /* @kind other */
+  --dur-fast:   .2s;                 /* @kind other */
+  --dur-mid:    .35s;                /* @kind other */
+  --dur-slow:   .8s;                 /* @kind other */
+
+  /* ---- texture ---- */
+  --dot-size: 34px;  /* code-grid dot field pitch */
+}
+
+/* Code-grid dot field — the brand's ambient texture.
+   Apply .sidre-dotfield to a positioned container to paint it. */
+.sidre-dotfield::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at center, var(--dot) 1px, transparent 1.4px);
+  background-size: var(--dot-size) var(--dot-size);
+  opacity: .55;
+  pointer-events: none;
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 60%, transparent 100%);
+}

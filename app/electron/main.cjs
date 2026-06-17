@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -40,6 +40,22 @@ async function appState() {
     launchAgentPath: launchAgentPath(),
     platform: process.platform,
     remotes: await listRemotes(),
+    clients: await dumpRemotes(),
+  };
+}
+
+// Parse an rclone --stats-one-line line into a live progress object.
+function parseStats(line) {
+  const m = line.match(
+    /Transferred:\s*([\d.]+\s*\w+)\s*\/\s*([\d.]+\s*\w+),\s*(\d+)%(?:,\s*([\d.]+\s*\w+\/s))?(?:,\s*ETA\s*(\S+))?/i,
+  );
+  if (!m) return null;
+  return {
+    transferred: m[1].replace(/\s+/g, ' ').trim(),
+    total: m[2].replace(/\s+/g, ' ').trim(),
+    pct: Number(m[3]),
+    speed: m[4] ? m[4].replace(/\s+/g, ' ').trim() : '',
+    eta: m[5] || '',
   };
 }
 
@@ -79,7 +95,7 @@ function splitArgs(input) {
   return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((part) => part.replace(/^"|"$/g, '')) || [];
 }
 
-async function runRcloneProfile(profile) {
+async function runRcloneProfile(profile, onProgress) {
   const rclone = findRclone();
   if (!rclone) {
     throw new Error('rclone bulunamadı. Homebrew ile `brew install rclone` kur veya RCLONE_PATH ayarla.');
@@ -95,20 +111,30 @@ async function runRcloneProfile(profile) {
     profile.destination,
     '--create-empty-src-dirs',
     '--stats-one-line',
-    '--stats=5s',
+    '--stats=1s',
     ...splitArgs(profile.extraArgs),
   ];
 
   return new Promise((resolve, reject) => {
     const child = spawn(rclone, args, { env: process.env });
     let output = '';
+    let pending = '';
 
-    child.stdout.on('data', (chunk) => {
-      output += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      output += chunk.toString();
-    });
+    const consume = (chunk) => {
+      const text = chunk.toString();
+      output += text;
+      if (typeof onProgress !== 'function') return;
+      pending += text;
+      const lines = pending.split(/\r?\n/);
+      pending = lines.pop() || '';
+      for (const line of lines) {
+        const stats = parseStats(line);
+        if (stats) onProgress(stats);
+      }
+    };
+
+    child.stdout.on('data', consume);
+    child.stderr.on('data', consume);
     child.on('error', reject);
     child.on('close', (code) => {
       const result = {
@@ -135,6 +161,71 @@ async function listRemotes() {
     child.on('error', () => resolve([]));
     child.on('close', () => {
       resolve(output.split(/\r?\n/).map((item) => item.trim()).filter(Boolean));
+    });
+  });
+}
+
+// Detailed remotes (name + type) via `rclone config dump`.
+async function dumpRemotes() {
+  const rclone = findRclone();
+  if (!rclone) return [];
+
+  return new Promise((resolve) => {
+    const child = spawn(rclone, ['config', 'dump']);
+    let output = '';
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.on('error', () => resolve([]));
+    child.on('close', () => {
+      try {
+        const parsed = JSON.parse(output || '{}');
+        resolve(
+          Object.entries(parsed).map(([name, value]) => ({
+            name: `${name}:`,
+            type: (value && value.type) || '',
+          })),
+        );
+      } catch {
+        resolve([]);
+      }
+    });
+  });
+}
+
+// List one remote folder via `rclone lsjson remote:path`.
+async function listRemoteDir(remotePath) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Motor bulunamadı.');
+  const target = String(remotePath || '').trim();
+  if (!target) throw new Error('Geçersiz bulut yolu.');
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(rclone, ['lsjson', target], { env: process.env });
+    let output = '';
+    let errOutput = '';
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      errOutput += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(errOutput.trim() || `Liste alınamadı (kod ${code}).`));
+        return;
+      }
+      try {
+        const entries = JSON.parse(output || '[]');
+        resolve(
+          entries
+            .map((entry) => ({ name: entry.Name, isDir: Boolean(entry.IsDir), size: entry.Size }))
+            .sort((a, b) => (a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1)),
+        );
+      } catch (parseError) {
+        reject(parseError);
+      }
     });
   });
 }
@@ -311,14 +402,35 @@ ipcMain.handle('profile:delete', async (_event, id) => {
   return appState();
 });
 
-ipcMain.handle('sync:run', async (_event, id) => {
+ipcMain.handle('sync:run', async (event, id) => {
   const config = await readConfig();
   const profile = config.profiles.find((item) => item.id === id);
   if (!profile) throw new Error('Profil bulunamadı.');
-  const result = await runRcloneProfile(profile);
-  config.lastRun[id] = { ok: true, ...result };
-  await writeConfig(config);
-  return appState();
+  const emit = (payload) => {
+    try {
+      event.sender.send('sync:progress', { id, ...payload });
+    } catch {
+      /* window may have closed */
+    }
+  };
+  emit({ running: true, pct: 0 });
+  try {
+    const result = await runRcloneProfile(profile, (stats) => emit({ running: true, ...stats }));
+    config.lastRun[id] = { ok: true, ...result };
+    await writeConfig(config);
+    emit({ running: false, pct: 100 });
+    return appState();
+  } catch (error) {
+    emit({ running: false });
+    throw error;
+  }
+});
+
+ipcMain.handle('remote:list', async (_event, remotePath) => listRemoteDir(remotePath));
+
+ipcMain.handle('open:external', async (_event, url) => {
+  const target = String(url || '');
+  if (/^https?:\/\//i.test(target)) await shell.openExternal(target);
 });
 
 ipcMain.handle('launch:set', async (_event, enabled) => {

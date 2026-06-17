@@ -1,0 +1,38 @@
+/* ============================================================
+   SIDRE LABS — Typography tokens
+   Display: Archivo, italic + oblique, expanded width, heavy,
+            uppercase, tight tracking. The "instrument" voice.
+   Body:    Archivo upright, regular.
+   Mono:    JetBrains Mono — labels, kickers, nav, metadata,
+            uppercase with wide tracking.
+   ============================================================ */
+:root {
+  /* ---- families ---- */
+  --ff-display: "Archivo", system-ui, sans-serif;       /* @kind font */
+  --ff-body:    "Archivo", system-ui, sans-serif;       /* @kind font */
+  --ff-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace; /* @kind font */
+
+  /* ---- display (oblique geometric headlines) ---- */
+  --display-weight:  800;             /* @kind other */
+  --display-stretch: 118%;            /* expanded @kind other */
+  --display-style:   italic;          /* oblique by default @kind other */
+  --display-tracking: -0.018em;       /* @kind other */
+  --display-leading:  0.9;            /* @kind other */
+
+  /* ---- mono label ---- */
+  --mono-size:     0.72rem;           /* @kind other */
+  --mono-tracking: 0.26em;            /* @kind other */
+  --mono-weight:   500;               /* @kind other */
+
+  /* ---- fluid type scale ---- */
+  --fs-hero:    clamp(2.5rem, 6.5vw, 6.7rem);          /* @kind other */
+  --fs-h1:      clamp(2.2rem, 5.2vw, 5rem);            /* @kind other */
+  --fs-h2:      clamp(2rem, 4.6vw, 4.1rem);            /* @kind other */
+  --fs-h3:      clamp(1.55rem, 3vw, 2.7rem);           /* @kind other */
+  --fs-lede:    clamp(1.05rem, 1.2vw, 1.22rem);        /* @kind other */
+  --fs-body:    clamp(1rem, 0.55vw + 0.85rem, 1.12rem);/* @kind other */
+  --fs-small:   0.86rem;                               /* @kind other */
+
+  --lh-body:    1.62;                 /* @kind other */
+  --lh-tight:   1.3;                  /* @kind other */
+}

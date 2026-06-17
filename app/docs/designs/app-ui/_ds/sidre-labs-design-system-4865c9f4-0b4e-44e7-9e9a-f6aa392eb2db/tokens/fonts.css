@@ -1,0 +1,9 @@
+/* ============================================================
+   SIDRE LABS — Webfonts
+   Archivo (variable: width 62–125, weight 100–900, italic)
+   JetBrains Mono (400 / 500 / 600)
+   Both self-load from Google Fonts. To self-host, drop the
+   .woff2 files in assets/fonts/ and replace the @import below
+   with @font-face rules pointing at them.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=JetBrains+Mono:wght@400;500;600&display=swap');

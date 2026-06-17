@@ -1,0 +1,30 @@
+/* ============================================================
+   SIDRE LABS — Spacing, radius, layout tokens
+   Sharp, machined geometry: near-zero corner radius, generous
+   section rhythm, wide page gutters.
+   ============================================================ */
+:root {
+  /* ---- spacing scale ---- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4.5rem;
+  --sp-9: 7rem;
+
+  /* ---- layout ---- */
+  --maxw: 1320px;
+  --pad:  clamp(1.4rem, 6vw, 7rem);   /* page gutter */
+  --sect: clamp(6rem, 13vh, 12rem);   /* section rhythm @kind spacing */
+
+  /* ---- radius (machined, near-sharp) ---- */
+  --r-sharp: 2px;   /* buttons, tags, cards */
+  --r-soft:  6px;   /* rare, larger panels */
+  --r-pill:  999px; /* toggles only */
+
+  /* ---- hairline weight ---- */
+  --hair: 1px;
+}
