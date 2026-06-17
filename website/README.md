@@ -50,17 +50,27 @@ npm run preview        # build + http://localhost:8080  (dist'i kökten servis e
 
 ## Build & deploy (K3s — sidrelabs.com/syncdeck)
 
-Bu adımlar registry'ye ve K3s kümesine erişim ister (kümeyle aynı namespace:
-`sidrelabs-web`).
+Canlı: **https://sidrelabs.com/syncdeck/**. Ana site (`sidrelabs-web`) ile aynı
+sunucu, aynı `sidrelabs-web` namespace'i ve aynı yöntem: imaj **registry'siz**,
+doğrudan k3s containerd'ye import edilir (`sidrelabs-web:1` ile birebir aynı
+mantık). Sunucuda registry yok; `imagePullPolicy: IfNotPresent`.
 
 ```bash
-# 1. imajı build et ve registry'ne push et (tag'i tarihle sabitle)
-docker build -t registry.sidrelabs.com/syncdeck-web:2026-06-17 .
-docker push  registry.sidrelabs.com/syncdeck-web:2026-06-17
+# 1. imajı sunucu mimarisi (amd64) için build et ve tar'a kaydet
+docker build --platform linux/amd64 --provenance=false -t syncdeck-web:1 .
+docker save syncdeck-web:1 -o /tmp/syncdeck-web.tar
 
-# 2. k8s/kustomization.yaml içindeki image newTag'i güncelle, sonra:
-kubectl apply -k k8s/
+# 2. tar'ı sunucuya kopyala ve k3s containerd'ye import et
+scp /tmp/syncdeck-web.tar root@<sunucu>:/tmp/
+ssh root@<sunucu> 'k3s ctr images import /tmp/syncdeck-web.tar'
+
+# 3. manifestleri uygula (tag'i bump ettiysen k8s/kustomization.yaml newTag'i güncelle)
+scp k8s/*.yaml root@<sunucu>:/tmp/syncdeck-k8s/
+ssh root@<sunucu> 'kubectl apply -k /tmp/syncdeck-k8s/'
 ```
+
+> Yeni sürümde `:1` → `:2` gibi tag'i bump et, yeniden import et ve
+> `kustomization.yaml` newTag'i güncelle (IfNotPresent eski imajı tutar).
 
 ### Notlar / varsayımlar
 - Site `/syncdeck/` alt yolu altında servis edilir; `nginx.conf` içeriği
