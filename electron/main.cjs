@@ -148,6 +148,14 @@ function normalizeRemote(remote) {
     type,
     clientId: String(remote.clientId || '').trim(),
     clientSecret: String(remote.clientSecret || '').trim(),
+    options: Array.isArray(remote.options)
+      ? remote.options
+          .map((option) => ({
+            key: String(option.key || '').trim(),
+            value: String(option.value || '').trim(),
+          }))
+          .filter((option) => option.key && option.value)
+      : [],
     extraArgs: String(remote.extraArgs || '').trim(),
   };
 }
@@ -160,6 +168,9 @@ async function createRemote(remoteInput) {
 
   if (remote.clientId) args.push('client_id', remote.clientId);
   if (remote.clientSecret) args.push('client_secret', remote.clientSecret);
+  for (const option of remote.options) {
+    args.push(option.key, option.value);
+  }
   args.push(...splitArgs(remote.extraArgs));
 
   return new Promise((resolve, reject) => {
