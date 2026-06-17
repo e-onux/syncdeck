@@ -1,0 +1,266 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/core/**",
+              "components/forms/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Archivo|JetBrains Mono))/i]",
+        "message": "Font not provided by the design system. Available: Archivo, JetBrains Mono."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|href|arrow|disabled|type|children|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, href, arrow, disabled, type, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|ghost|quiet)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'ghost' | 'quiet'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='type'] > Literal[value!=/^(?:button|submit|reset)$/]",
+        "message": "<Button> type must be one of 'button' | 'submit' | 'reset'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:hover|flush|children|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: hover, flush, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|multiline|invalid|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: label, multiline, invalid."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LangToggle'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|options|onChange|key|ref|className|style|children)$/]",
+        "message": "<LangToggle> doesn't accept that prop. Declared props: value, options, onChange."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='MonoLabel'] > JSXAttribute > JSXIdentifier[name!=/^(?:num|tick|children|key|ref|className|style|children)$/]",
+        "message": "<MonoLabel> doesn't accept that prop. Declared props: num, tick, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ServiceRow'] > JSXAttribute > JSXIdentifier[name!=/^(?:index|title|kicker|tag|children|key|ref|className|style|children)$/]",
+        "message": "<ServiceRow> doesn't accept that prop. Declared props: index, title, kicker, tag, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tag'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|children|key|ref|className|style|children)$/]",
+        "message": "<Tag> doesn't accept that prop. Declared props: variant, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tag'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:default|accent|solid)$/]",
+        "message": "<Tag> variant must be one of 'default' | 'accent' | 'solid'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "LangToggle": {
+        "replaces": []
+      },
+      "MonoLabel": {
+        "replaces": []
+      },
+      "ServiceRow": {
+        "replaces": []
+      },
+      "Tag": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-dim",
+      "--accent-ink",
+      "--bg",
+      "--bg-2",
+      "--border-accent",
+      "--border-default",
+      "--brand",
+      "--brand-deep",
+      "--display-leading",
+      "--display-stretch",
+      "--display-style",
+      "--display-tracking",
+      "--display-weight",
+      "--dot",
+      "--dot-size",
+      "--dur-fast",
+      "--dur-mid",
+      "--dur-slow",
+      "--ease-out",
+      "--ease-std",
+      "--ff-body",
+      "--ff-display",
+      "--ff-mono",
+      "--focus-ring",
+      "--fs-body",
+      "--fs-h1",
+      "--fs-h2",
+      "--fs-h3",
+      "--fs-hero",
+      "--fs-lede",
+      "--fs-small",
+      "--glow-accent",
+      "--glow-focus",
+      "--hair",
+      "--ink",
+      "--ink-dim",
+      "--ink-faint",
+      "--lh-body",
+      "--lh-tight",
+      "--line",
+      "--line-soft",
+      "--maxw",
+      "--mono-size",
+      "--mono-tracking",
+      "--mono-weight",
+      "--pad",
+      "--r-pill",
+      "--r-sharp",
+      "--r-soft",
+      "--sect",
+      "--shadow-panel",
+      "--sp-1",
+      "--sp-2",
+      "--sp-3",
+      "--sp-4",
+      "--sp-5",
+      "--sp-6",
+      "--sp-7",
+      "--sp-8",
+      "--sp-9",
+      "--surface",
+      "--surface-2",
+      "--surface-card",
+      "--surface-page",
+      "--text-body",
+      "--text-muted",
+      "--text-strong"
+    ],
+    "tokenKinds": {
+      "--bg": "color",
+      "--bg-2": "color",
+      "--surface": "color",
+      "--surface-2": "color",
+      "--brand": "color",
+      "--brand-deep": "color",
+      "--accent": "color",
+      "--accent-ink": "color",
+      "--accent-dim": "color",
+      "--ink": "color",
+      "--ink-dim": "color",
+      "--ink-faint": "color",
+      "--line": "color",
+      "--line-soft": "color",
+      "--dot": "color",
+      "--text-strong": "font",
+      "--text-body": "font",
+      "--text-muted": "font",
+      "--surface-page": "color",
+      "--surface-card": "color",
+      "--border-default": "color",
+      "--border-accent": "color",
+      "--focus-ring": "color",
+      "--ff-display": "font",
+      "--ff-body": "font",
+      "--ff-mono": "font",
+      "--display-weight": "other",
+      "--display-stretch": "spacing",
+      "--display-style": "other",
+      "--display-tracking": "other",
+      "--display-leading": "other",
+      "--mono-size": "other",
+      "--mono-tracking": "other",
+      "--mono-weight": "other",
+      "--fs-hero": "other",
+      "--fs-h1": "other",
+      "--fs-h2": "other",
+      "--fs-h3": "other",
+      "--fs-lede": "other",
+      "--fs-body": "other",
+      "--fs-small": "other",
+      "--lh-body": "other",
+      "--lh-tight": "other",
+      "--sp-1": "spacing",
+      "--sp-2": "spacing",
+      "--sp-3": "spacing",
+      "--sp-4": "spacing",
+      "--sp-5": "spacing",
+      "--sp-6": "spacing",
+      "--sp-7": "spacing",
+      "--sp-8": "spacing",
+      "--sp-9": "spacing",
+      "--maxw": "spacing",
+      "--pad": "spacing",
+      "--sect": "other",
+      "--r-sharp": "spacing",
+      "--r-soft": "spacing",
+      "--r-pill": "spacing",
+      "--hair": "spacing",
+      "--glow-accent": "color",
+      "--glow-focus": "color",
+      "--shadow-panel": "shadow",
+      "--ease-out": "other",
+      "--ease-std": "other",
+      "--dur-fast": "other",
+      "--dur-mid": "other",
+      "--dur-slow": "other",
+      "--dot-size": "spacing"
+    },
+    "fontFamilies": [
+      "Archivo",
+      "JetBrains Mono"
+    ]
+  }
+}

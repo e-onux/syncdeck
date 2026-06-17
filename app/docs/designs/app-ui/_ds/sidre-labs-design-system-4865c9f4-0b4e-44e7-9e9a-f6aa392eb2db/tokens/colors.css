@@ -1,0 +1,41 @@
+/* ============================================================
+   SIDRE LABS — Color tokens
+   Deep teal-tinted near-black canvas · structural brand teal ·
+   mint accent · off-white ink. Hue ~172 (teal) throughout.
+   ============================================================ */
+:root {
+  /* ---- canvas / surfaces (deep teal-black, hue 172) ---- */
+  --bg:        oklch(0.17 0.018 172);   /* page canvas */
+  --bg-2:      oklch(0.205 0.022 172);  /* raised band */
+  --surface:   oklch(0.225 0.024 172);  /* card / panel */
+  --surface-2: oklch(0.26 0.026 172);   /* hover / inset */
+
+  /* ---- brand ---- */
+  --brand:      #1c4742;  /* logo teal — structural, lines & art */
+  --brand-deep: #0e2e2a;  /* deepest teal */
+
+  /* ---- accent (mint) ---- */
+  --accent:      #5fd6b6; /* primary mint accent */
+  --accent-ink:  #062b22; /* ink on a mint fill */
+  --accent-dim:  oklch(0.78 0.10 172); /* muted mint */
+
+  /* ---- ink (off-white, warm-cool neutral) ---- */
+  --ink:       oklch(0.95 0.008 170);  /* primary text */
+  --ink-dim:   oklch(0.74 0.018 168);  /* secondary text */
+  --ink-faint: oklch(0.55 0.018 168);  /* tertiary / mono labels */
+
+  /* ---- hairlines & marks ---- */
+  --line:      color-mix(in oklch, var(--accent) 16%, transparent); /* accent hairline */
+  --line-soft: color-mix(in oklch, var(--ink) 9%, transparent);     /* neutral hairline */
+  --dot:       color-mix(in oklch, var(--accent) 22%, transparent); /* dot-grid field */
+
+  /* ---- semantic aliases ---- */
+  --text-strong:    var(--ink);
+  --text-body:      var(--ink-dim);
+  --text-muted:     var(--ink-faint);
+  --surface-page:   var(--bg);
+  --surface-card:   var(--surface);
+  --border-default: var(--line-soft);
+  --border-accent:  var(--line);
+  --focus-ring:     color-mix(in oklch, var(--accent) 45%, transparent);
+}

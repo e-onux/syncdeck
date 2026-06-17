@@ -73,3 +73,18 @@ npm run bundle:linux
 - OAuth browser callback capture where the provider allows it.
 - GUI coverage for copy, sync, move, bisync, check, mount, serve, crypt, obscure, dedupe, purge, cleanup, ls/json, size, config edit/delete, and backend-specific flags.
 - Job queue, scheduler, dry-run preview, conflict policy, bandwidth controls, progress streaming, and log history.
+
+## UI / Design
+
+The interface follows the **Sidre Labs** design system (deep teal-black canvas,
+oblique Archivo headlines, JetBrains Mono labels, mint accent, 2px corners, no
+shadows) — the same language as the product site.
+
+- Design source (Claude Design handoff): [`docs/designs/app-ui/`](docs/designs/app-ui/) (`SyncDeck.dc.html` + `_ds/` tokens + chat transcripts).
+- Single-window layout: title bar · profile sidebar · profile editor · global
+  status bar, with overlay surfaces for Settings (Arayüz / İstemciler / Hakkında),
+  a 3-step client wizard (live engine-command preview), and a cloud file picker.
+- The UI calls the engine "motor"; rclone is credited only in About.
+- Live status bar, cloud picker, client types and external links are wired to
+  real `electron/main.cjs` IPC (progress streaming, `lsjson`, `config dump`,
+  `openExternal`). Remaining backend follow-ups: [`docs/todos/01-app-ui.md`](docs/todos/01-app-ui.md).

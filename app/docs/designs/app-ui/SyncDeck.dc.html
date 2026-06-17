@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/sidre-labs-design-system-4865c9f4-0b4e-44e7-9e9a-f6aa392eb2db/styles.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in oklch, var(--ink) 12%, transparent); border: 3px solid var(--bg-2); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  @keyframes sd-pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  @keyframes sd-eq { 0%,100% { transform: scaleY(.22); } 50% { transform: scaleY(1); } }
+  @keyframes sd-fade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes sd-scan { to { background-position: 30px 0; } }
+  .sd-hover:hover { background: var(--surface) !important; }
+  .sd-pv:hover { border-color: var(--accent) !important; background: var(--surface-2) !important; }
+  .sd-ico:hover { color: var(--accent) !important; border-color: var(--line) !important; }
+  .sd-chip:hover { border-color: var(--line) !important; color: var(--ink) !important; }
+  .sd-file:hover { background: var(--surface) !important; }
+  .sd-overlay { opacity: 1; }
+</style>
+</helmet>
+
+<div data-sl-root="true" style="--accent: {{ accent }}; position: relative; height: 100vh; min-height: 660px; display: flex; flex-direction: column; background: var(--bg); color: var(--ink); font-family: var(--ff-body); overflow: hidden;">
+
+  <div style="position: absolute; inset: 0; background-image: radial-gradient(circle at center, var(--dot) 1px, transparent 1.4px); background-size: 34px 34px; opacity: .4; pointer-events: none; z-index: 0; -webkit-mask-image: linear-gradient(180deg,#000 0%,#000 50%,transparent 100%); mask-image: linear-gradient(180deg,#000 0%,#000 50%,transparent 100%);"></div>
+
+  <!-- ===================== TITLE BAR ===================== -->
+  <header style="position: relative; z-index: 3; flex: 0 0 auto; height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 16px; background: color-mix(in oklch, var(--bg) 72%, transparent); backdrop-filter: blur(14px) saturate(1.2); border-bottom: 1px solid var(--line-soft);">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="width: 11px; height: 11px; border-radius: 50%; background: color-mix(in oklch, var(--ink) 20%, transparent);"></span>
+      <span style="width: 11px; height: 11px; border-radius: 50%; background: color-mix(in oklch, var(--ink) 20%, transparent);"></span>
+      <span style="width: 11px; height: 11px; border-radius: 50%; background: color-mix(in oklch, var(--accent) 55%, transparent);"></span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 11px; margin-left: 6px;">
+      <svg width="26" height="24" viewBox="0 0 30 28" fill="none" style="display:block;">
+        <path d="M6 8 L15 13.5 L24 8" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 14 L15 19.5 L24 14" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+        <path d="M6 20 L15 25.5 L24 20" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+      </svg>
+      <span style="font-family: var(--ff-mono); font-weight: 600; font-size: .82rem; letter-spacing: .26em; color: var(--ink);">SYNCDECK</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+      <span style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); display: flex; align-items: center; gap: 7px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: sd-pulse 2.4s ease-in-out infinite;"></span>
+        {{ connLabel }}
+      </span>
+      <button class="sd-ico" onClick="{{ openSettings }}" title="Ayarlar" style="appearance: none; cursor: pointer; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: transparent; color: var(--ink-dim); transition: color .2s, border-color .2s;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 13a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V19a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.5 17.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H2a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 3.6 8.5a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H8a1.7 1.7 0 0 0 1-1.56V2a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V8a1.7 1.7 0 0 0 1.56 1H22a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================== BODY ===================== -->
+  <div style="position: relative; z-index: 2; flex: 1 1 auto; display: flex; min-height: 0;">
+
+    <!-- ---------- SIDEBAR ---------- -->
+    <aside style="flex: 0 0 264px; display: flex; flex-direction: column; background: color-mix(in oklch, var(--bg-2) 55%, transparent); border-right: 1px solid var(--line-soft); min-height: 0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px;">
+        <span style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint);">Profiller</span>
+        <span style="font-family: var(--ff-mono); font-size: .64rem; color: var(--accent);">{{ profileCount }}</span>
+      </div>
+      <div style="flex: 1 1 auto; overflow-y: auto; padding: 0 10px;">
+        <sc-for list="{{ profiles }}" as="p" hint-placeholder-count="3">
+          <button class="sd-hover" onClick="{{ p.select }}" style="width: 100%; text-align: left; appearance: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 11px; margin-bottom: 3px; border: 0; border-left: 2px solid {{ p.bar }}; background: {{ p.bg }}; transition: background .18s;">
+            <div style="flex: 0 0 auto; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); color: {{ p.icoColor }};">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            </div>
+            <div style="flex: 1 1 auto; min-width: 0;">
+              <div style="font-size: .9rem; font-weight: 600; color: {{ p.titleColor }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</div>
+              <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.remote }}</div>
+            </div>
+            <span style="flex: 0 0 auto; font-family: var(--ff-mono); font-size: .52rem; letter-spacing: .1em; text-transform: uppercase; color: {{ p.modeColor }}; border: 1px solid {{ p.modeBorder }}; padding: 3px 6px;">{{ p.modeTag }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="padding: 10px;">
+        <button class="sl-btn sl-btn--ghost sl-btn--sm" onClick="{{ newProfile }}" style="width: 100%; justify-content: center;">+ Yeni profil</button>
+      </div>
+      <div style="padding: 12px 18px; border-top: 1px solid var(--line-soft); display: flex; align-items: center; gap: 10px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent);"></span>
+        <div style="min-width: 0;">
+          <div style="font-size: .72rem; font-weight: 600; color: var(--ink);">Motor hazır</div>
+          <div style="font-family: var(--ff-mono); font-size: .56rem; letter-spacing: .08em; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ clientCountLabel }}</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ---------- MAIN: PROFILE EDITOR ---------- -->
+    <main style="flex: 1 1 auto; min-width: 0; overflow-y: auto;">
+      <div style="max-width: 940px; margin: 0 auto; padding: 30px clamp(20px, 4vw, 44px) 36px;">
+
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px;">
+          <div>
+            <div style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px;">Sync profili · aktif</div>
+            <h1 style="margin: 0; font-family: var(--ff-display); font-style: italic; font-stretch: 116%; font-weight: 800; text-transform: uppercase; letter-spacing: -.018em; line-height: .92; font-size: clamp(1.9rem, 4vw, 2.8rem); color: var(--ink);">{{ activeName }}</h1>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="sl-btn sl-btn--ghost sl-btn--sm" onClick="{{ toggleRun }}">{{ runLabel }}</button>
+            <button class="sl-btn sl-btn--sm" onClick="{{ saveProfile }}">Kaydet</button>
+          </div>
+        </div>
+
+        <!-- source -> dest -->
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; margin-bottom: 16px;">
+          <div class="sl-card" style="padding: 18px;">
+            <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; display:flex; align-items:center; gap:8px;"><span style="color:var(--accent);">01</span> Kaynak · yerel</div>
+            <div style="font-size: .82rem; color: var(--ink); word-break: break-all; line-height: 1.5; min-height: 38px;">{{ srcPath }}</div>
+            <button class="sl-btn sl-btn--ghost sl-btn--sm" onClick="{{ browseLocal }}" style="margin-top: 14px;">Gözat</button>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.4rem;">→</div>
+          <div class="sl-card" style="padding: 18px;">
+            <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; display:flex; align-items:center; gap:8px;"><span style="color:var(--accent);">02</span> Hedef · bulut</div>
+            <div style="font-size: .82rem; color: var(--ink); word-break: break-all; line-height: 1.5; min-height: 38px;">{{ destPath }}</div>
+            <button class="sl-btn sl-btn--ghost sl-btn--sm" onClick="{{ openPicker }}" style="margin-top: 14px;">Bulutta gözat</button>
+          </div>
+        </div>
+
+        <!-- client selector -->
+        <div class="sl-card sl-card--flush" style="padding: 16px 18px; margin-bottom: 16px;">
+          <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px;">Hedef istemci</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <sc-for list="{{ clientChips }}" as="c" hint-placeholder-count="3">
+              <button class="sd-chip" onClick="{{ c.select }}" style="appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 9px; padding: 8px 13px; border: 1px solid {{ c.border }}; background: {{ c.bg }}; color: {{ c.color }}; border-radius: var(--r-sharp); transition: border-color .18s, color .18s;">
+                <span style="width:18px;height:18px;display:flex;color:{{ c.glyphColor }};" dangerouslySetInnerHTML="{{ c.icon }}"></span>
+                <span style="font-size: .82rem; font-weight: 600;">{{ c.name }}</span>
+                <span style="font-family: var(--ff-mono); font-size: .56rem; letter-spacing: .08em; color: var(--ink-faint);">{{ c.remote }}</span>
+              </button>
+            </sc-for>
+            <button class="sd-chip" onClick="{{ addClient }}" style="appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border: 1px dashed var(--line-soft); background: transparent; color: var(--ink-faint); border-radius: var(--r-sharp); transition: border-color .18s, color .18s;">
+              <span style="font-size: 1rem; line-height: 1;">+</span>
+              <span style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase;">İstemci ekle</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- mode -->
+        <div class="sl-card sl-card--flush" style="padding: 16px 18px; margin-bottom: 16px;">
+          <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px;">Senkron modu</div>
+          <div style="display: flex; gap: 8px;">
+            <sc-for list="{{ modes }}" as="m" hint-placeholder-count="2">
+              <button onClick="{{ m.select }}" style="appearance: none; cursor: pointer; flex: 1; text-align: left; padding: 13px 15px; border: 1px solid {{ m.border }}; background: {{ m.bg }}; border-radius: var(--r-sharp); transition: border-color .18s, background .18s;">
+                <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 6px;">
+                  <span style="width: 13px; height: 13px; border-radius: 50%; border: 2px solid {{ m.dot }}; display: inline-flex; align-items: center; justify-content: center;"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{ m.dotFill }};"></span></span>
+                  <span style="font-size: .9rem; font-weight: 600; color: {{ m.titleColor }};">{{ m.title }}</span>
+                  <code style="margin-left: auto; font-family: var(--ff-mono); font-size: .6rem; color: var(--ink-faint);">{{ m.cmd }}</code>
+                </div>
+                <div style="font-size: .76rem; color: var(--ink-dim); line-height: 1.45;">{{ m.desc }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- options -->
+        <div class="sl-card sl-card--flush" style="padding: 16px 18px; margin-bottom: 16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+            <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint);">Zamanlama & seçenekler</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <sc-for list="{{ options }}" as="o" hint-placeholder-count="3">
+              <button class="sd-hover" onClick="{{ o.toggle }}" style="appearance: none; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 12px; padding: 11px 8px; border: 0; background: transparent;">
+                <span style="flex: 0 0 auto; width: 38px; height: 22px; border-radius: var(--r-pill); background: {{ o.trackBg }}; position: relative; transition: background .2s;">
+                  <span style="position: absolute; top: 2px; left: {{ o.knobX }}; width: 18px; height: 18px; border-radius: 50%; background: {{ o.knobBg }}; transition: left .2s var(--ease-out);"></span>
+                </span>
+                <div style="flex: 1 1 auto; min-width: 0;">
+                  <div style="font-size: .84rem; font-weight: 600; color: var(--ink);">{{ o.label }}</div>
+                  <div style="font-size: .72rem; color: var(--ink-faint);">{{ o.hint }}</div>
+                </div>
+                <code style="font-family: var(--ff-mono); font-size: .6rem; color: {{ o.flagColor }};">{{ o.flag }}</code>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- log -->
+        <div style="border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: color-mix(in oklch, var(--bg-2) 80%, #000); overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-bottom: 1px solid var(--line-soft);">
+            <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ logDot }};"></span>
+            <span style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint);">Canlı günlük</span>
+            <span style="margin-left:auto; font-family: var(--ff-mono); font-size: .58rem; color: var(--ink-faint);">{{ logTime }}</span>
+          </div>
+          <pre style="margin: 0; padding: 13px 16px; font-family: var(--ff-mono); font-size: .72rem; line-height: 1.7; color: var(--ink-dim); white-space: pre-wrap; max-height: 150px; overflow-y: auto;">{{ logText }}</pre>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===================== STATUS BAR ===================== -->
+  <footer style="position: relative; z-index: 3; flex: 0 0 auto; height: 56px; display: flex; align-items: center; gap: 0; padding: 0 16px; background: color-mix(in oklch, var(--bg-2) 88%, #000); border-top: 1px solid var(--line-soft);">
+    <div style="display: flex; align-items: center; gap: 9px; padding-right: 18px; border-right: 1px solid var(--line-soft); height: 100%;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ statusDot }}; box-shadow: 0 0 0 3px color-mix(in oklch, {{ statusDot }} 22%, transparent); animation: sd-pulse 2.4s ease-in-out infinite;"></span>
+      <div>
+        <div style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); line-height: 1;">Durum</div>
+        <div style="font-size: .76rem; font-weight: 600; color: var(--ink); margin-top: 3px;">{{ statusText }}</div>
+      </div>
+    </div>
+
+    <!-- equalizer -->
+    <div style="display: flex; align-items: center; gap: 14px; padding: 0 18px; border-right: 1px solid var(--line-soft); height: 100%;">
+      <div style="display: flex; align-items: flex-end; gap: 2px; height: 26px;">
+        <sc-for list="{{ eqBars }}" as="b" hint-placeholder-count="22">
+          <span style="width: 3px; height: 26px; background: {{ b.color }}; transform-origin: bottom; transform: scaleY({{ b.base }}); animation: sd-eq {{ b.dur }} ease-in-out {{ b.delay }} infinite; animation-play-state: {{ eqState }};"></span>
+        </sc-for>
+      </div>
+      <div>
+        <div style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); line-height: 1;">Hız</div>
+        <div style="font-family: var(--ff-mono); font-size: .82rem; font-weight: 600; color: var(--accent); margin-top: 3px;">{{ speedText }}</div>
+      </div>
+    </div>
+
+    <!-- progress -->
+    <div style="flex: 1 1 auto; display: flex; align-items: center; gap: 14px; padding: 0 18px; min-width: 0;">
+      <div style="flex: 1 1 auto; min-width: 80px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+          <span style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .12em; color: var(--ink-dim);">{{ transferText }}</span>
+          <span style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .12em; color: var(--ink-faint);">{{ pctText }}</span>
+        </div>
+        <div style="height: 4px; background: color-mix(in oklch, var(--ink) 8%, transparent); border-radius: var(--r-pill); overflow: hidden;">
+          <div style="height: 100%; width: {{ pct }}%; background: linear-gradient(90deg, var(--brand), var(--accent)); border-radius: var(--r-pill); transition: width .4s linear;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- stats -->
+    <div style="display: flex; align-items: center; gap: 22px; padding-left: 18px; border-left: 1px solid var(--line-soft); height: 100%;">
+      <div style="text-align: right;">
+        <div style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); line-height: 1;">Dosya</div>
+        <div style="font-family: var(--ff-mono); font-size: .82rem; font-weight: 600; color: var(--ink); margin-top: 3px;">{{ filesText }}</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); line-height: 1;">ETA</div>
+        <div style="font-family: var(--ff-mono); font-size: .82rem; font-weight: 600; color: var(--ink); margin-top: 3px;">{{ etaText }}</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===================== SETTINGS OVERLAY ===================== -->
+  <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="sd-overlay" style="position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: color-mix(in oklch, #000 58%, transparent); backdrop-filter: blur(6px); padding: 36px;">
+      <div style="width: min(820px, 100%); height: min(580px, 100%); display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-soft); overflow: hidden; box-shadow: var(--shadow-panel);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line-soft);">
+          <div style="display:flex; align-items:center; gap: 12px;">
+            <span style="font-family: var(--ff-display); font-style: italic; font-stretch: 116%; font-weight: 800; text-transform: uppercase; font-size: 1.3rem; color: var(--ink);">Ayarlar</span>
+          </div>
+          <button class="sd-ico" onClick="{{ closeSettings }}" style="appearance:none; cursor:pointer; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: transparent; color: var(--ink-dim);">✕</button>
+        </div>
+        <div style="display: flex; flex: 1 1 auto; min-height: 0;">
+          <!-- settings nav -->
+          <nav style="flex: 0 0 190px; padding: 14px 12px; border-right: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 3px;">
+            <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="3">
+              <button class="sd-hover" onClick="{{ t.select }}" style="appearance:none; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; padding: 10px 12px; border: 0; border-left: 2px solid {{ t.bar }}; background: {{ t.bg }};">
+                <span style="width:16px;height:16px;display:flex;color:{{ t.color }};" dangerouslySetInnerHTML="{{ t.icon }}"></span>
+                <span style="font-size: .84rem; font-weight: 600; color: {{ t.color }};">{{ t.label }}</span>
+              </button>
+            </sc-for>
+          </nav>
+          <!-- settings content -->
+          <div style="flex: 1 1 auto; overflow-y: auto; padding: 24px 26px;">
+
+            <!-- INTERFACE -->
+            <sc-if value="{{ tabInterface }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px;">Dil</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 30px;">
+                  <sc-for list="{{ languages }}" as="lg" hint-placeholder-count="9">
+                    <button class="sd-chip" onClick="{{ lg.select }}" style="appearance:none; cursor:pointer; display:flex; align-items:center; gap: 9px; padding: 11px 13px; border: 1px solid {{ lg.border }}; background: {{ lg.bg }}; color: {{ lg.color }}; border-radius: var(--r-sharp);">
+                      <span style="font-size: 1rem;">{{ lg.flag }}</span>
+                      <span style="font-size: .8rem; font-weight: 600;">{{ lg.name }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+                <div style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 14px;">Vurgu rengi</div>
+                <div style="display: flex; gap: 10px;">
+                  <sc-for list="{{ accentSwatches }}" as="sw" hint-placeholder-count="4">
+                    <button onClick="{{ sw.select }}" title="{{ sw.name }}" style="appearance:none; cursor:pointer; width: 40px; height: 40px; border-radius: var(--r-sharp); background: {{ sw.color }}; border: 2px solid {{ sw.ring }};"></button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- CLIENTS -->
+            <sc-if value="{{ tabClients }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 16px;">
+                  <div style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint);">Tanımlı istemciler</div>
+                  <button class="sl-btn sl-btn--sm" onClick="{{ startWizard }}">+ Yeni istemci</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <sc-for list="{{ clientList }}" as="c" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 13px; padding: 13px 15px; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: var(--surface);">
+                      <span style="width: 22px; height: 22px; display:flex; color: var(--accent);" dangerouslySetInnerHTML="{{ c.icon }}"></span>
+                      <div style="flex: 1 1 auto; min-width: 0;">
+                        <div style="font-size: .88rem; font-weight: 600; color: var(--ink);">{{ c.name }}</div>
+                        <div style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .08em; color: var(--ink-faint);">{{ c.type }} · {{ c.remote }}</div>
+                      </div>
+                      <span style="display:flex; align-items:center; gap: 6px; font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent);"><span style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span>{{ c.status }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ABOUT -->
+            <sc-if value="{{ tabAbout }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 18px;">
+                  <svg width="44" height="40" viewBox="0 0 30 28" fill="none"><path d="M6 8 L15 13.5 L24 8" stroke="var(--accent)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 14 L15 19.5 L24 14" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/><path d="M6 20 L15 25.5 L24 20" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/></svg>
+                  <div>
+                    <div style="font-family: var(--ff-display); font-style: italic; font-stretch: 116%; font-weight: 800; text-transform: uppercase; font-size: 1.5rem; color: var(--ink); line-height: 1;">SyncDeck</div>
+                    <div style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .14em; color: var(--ink-faint); margin-top: 6px;">Sürüm {{ version }} · sidrelabs.com/syncdeck</div>
+                  </div>
+                </div>
+                <div class="sl-card" style="padding: 18px 20px; margin-bottom: 14px;">
+                  <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px;">Açık kaynak hakkında</div>
+                  <p style="margin: 0; font-size: .86rem; line-height: 1.6; color: var(--ink-dim);">SyncDeck, bağımsız açık kaynak <strong style="color:var(--ink);">rclone</strong> projesinin grafik bir sarmalayıcısıdır (wrapper). Tüm aktarımlar arka planda rclone komut satırı motoruyla yürütülür; SyncDeck yalnızca onu kullanışlı bir arayüzle sunar. rclone uygulamayla birlikte paketlenir — ayrıca kurman gerekmez.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button class="sl-btn sl-btn--ghost sl-btn--sm">rclone.org</button>
+                  <button class="sl-btn sl-btn--ghost sl-btn--sm">GitHub · e-onux/syncdeck</button>
+                </div>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== CLIENT WIZARD OVERLAY ===================== -->
+  <sc-if value="{{ wizardOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="sd-overlay" style="position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: color-mix(in oklch, #000 62%, transparent); backdrop-filter: blur(6px); padding: 36px;">
+      <div style="width: min(720px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-soft); overflow: hidden; box-shadow: var(--shadow-panel);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line-soft);">
+          <div>
+            <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px;">Yeni istemci · adım {{ wizStepNum }}/3</div>
+            <div style="font-family: var(--ff-display); font-style: italic; font-stretch: 116%; font-weight: 800; text-transform: uppercase; font-size: 1.25rem; color: var(--ink); line-height: 1;">{{ wizTitle }}</div>
+          </div>
+          <button class="sd-ico" onClick="{{ closeWizard }}" style="appearance:none; cursor:pointer; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: transparent; color: var(--ink-dim);">✕</button>
+        </div>
+
+        <!-- step rail -->
+        <div style="display: flex; gap: 6px; padding: 14px 22px 0;">
+          <sc-for list="{{ wizRail }}" as="r" hint-placeholder-count="3">
+            <span style="flex: 1; height: 3px; background: {{ r.color }}; border-radius: var(--r-pill);"></span>
+          </sc-for>
+        </div>
+
+        <div style="flex: 1 1 auto; overflow-y: auto; padding: 22px;">
+
+          <!-- step 1: type -->
+          <sc-if value="{{ wizStep1 }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <p style="margin: 0 0 16px; font-size: .84rem; color: var(--ink-dim); line-height: 1.55;">Bağlanmak istediğin bulut türünü seç. SyncDeck arka planda uygun yapılandırmayı oluşturur.</p>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <sc-for list="{{ providerTypes }}" as="pt" hint-placeholder-count="6">
+                  <button class="sd-pv" onClick="{{ pt.select }}" style="appearance:none; cursor:pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid {{ pt.border }}; background: {{ pt.bg }}; border-radius: var(--r-sharp); transition: border-color .18s, background .18s;">
+                    <span style="width: 24px; height: 24px; display:flex; color: {{ pt.color }};" dangerouslySetInnerHTML="{{ pt.icon }}"></span>
+                    <span style="font-size: .84rem; font-weight: 600; color: var(--ink); text-align: left;">{{ pt.name }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- step 2: credentials -->
+          <sc-if value="{{ wizStep2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 18px;">
+              <div class="sl-field">
+                <label class="sl-field__label">İstemci adı</label>
+                <input class="sl-input" value="{{ wizName }}" onInput="{{ onWizName }}" placeholder="ör. İş Drive" />
+              </div>
+              <div class="sl-field">
+                <label class="sl-field__label">{{ wizCredLabel }}</label>
+                <input class="sl-input" value="{{ wizCred }}" onInput="{{ onWizCred }}" placeholder="{{ wizCredPlaceholder }}" />
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: var(--surface);">
+                <span style="width: 18px; height: 18px; display:flex; color: var(--accent);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5z"/><path d="M9 12l2 2 4-4"/></svg></span>
+                <span style="font-size: .76rem; color: var(--ink-dim); line-height: 1.5;">Kimlik bilgileri yalnızca yerel rclone yapılandırmanda saklanır, hiçbir yere gönderilmez.</span>
+              </div>
+              <button class="sl-btn sl-btn--ghost sl-btn--sm" style="align-self: flex-start;">{{ wizAuthLabel }}</button>
+            </div>
+          </sc-if>
+
+          <!-- step 3: review -->
+          <sc-if value="{{ wizStep3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <p style="margin: 0; font-size: .84rem; color: var(--ink-dim); line-height: 1.55;">Her şey hazır. SyncDeck aşağıdaki komutu arka planda çalıştırarak istemciyi oluşturacak:</p>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ wizReview }}" as="rv" hint-placeholder-count="3">
+                  <div style="display: flex; justify-content: space-between; gap: 16px; padding: 11px 14px; border: 1px solid var(--line-soft); border-radius: var(--r-sharp);">
+                    <span style="font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint);">{{ rv.k }}</span>
+                    <span style="font-size: .82rem; font-weight: 600; color: var(--ink); text-align: right;">{{ rv.v }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+
+        <!-- live CLI preview + nav -->
+        <div style="border-top: 1px solid var(--line-soft); background: color-mix(in oklch, var(--bg-2) 80%, #000);">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px;">
+            <span style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint);">Motor komutu</span>
+            <span style="flex:1; height:1px; background: var(--line-soft);"></span>
+            <span style="font-family: var(--ff-mono); font-size: .54rem; letter-spacing: .12em; color: var(--accent);">arka planda çalışır</span>
+          </div>
+          <pre style="margin: 0; padding: 0 16px 14px; font-family: var(--ff-mono); font-size: .72rem; line-height: 1.6; color: var(--accent-dim); white-space: pre-wrap;">{{ wizCli }}</pre>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--line-soft);">
+            <button class="sl-btn sl-btn--quiet sl-btn--sm" onClick="{{ wizBack }}" style="visibility: {{ wizBackVis }};">‹ Geri</button>
+            <button class="sl-btn sl-btn--sm" onClick="{{ wizNext }}">{{ wizNextLabel }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===================== CLOUD FILE PICKER OVERLAY ===================== -->
+  <sc-if value="{{ pickerOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="sd-overlay" style="position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: color-mix(in oklch, #000 62%, transparent); backdrop-filter: blur(6px); padding: 36px;">
+      <div style="width: min(680px, 100%); height: min(560px, 100%); display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-soft); overflow: hidden; box-shadow: var(--shadow-panel);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line-soft);">
+          <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+            <span style="width: 20px; height: 20px; display:flex; color: var(--accent);" dangerouslySetInnerHTML="{{ pickerIcon }}"></span>
+            <div style="min-width:0;">
+              <div style="font-size: .9rem; font-weight: 600; color: var(--ink);">{{ pickerClient }}</div>
+              <div style="font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .08em; color: var(--ink-faint);">Bulut konumu seç</div>
+            </div>
+          </div>
+          <button class="sd-ico" onClick="{{ closePicker }}" style="appearance:none; cursor:pointer; width: 32px; height: 32px; display:flex; align-items:center; justify-content:center; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: transparent; color: var(--ink-dim);">✕</button>
+        </div>
+        <!-- breadcrumb -->
+        <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid var(--line-soft);">
+          <sc-for list="{{ crumbs }}" as="cr" hint-placeholder-count="2">
+            <button class="sd-chip" onClick="{{ cr.go }}" style="appearance:none; cursor:pointer; padding: 5px 9px; border: 0; background: transparent; color: {{ cr.color }}; font-family: var(--ff-mono); font-size: .66rem; letter-spacing: .06em;">{{ cr.name }}</button>
+            <span style="color: var(--ink-faint); font-size: .7rem;">{{ cr.sep }}</span>
+          </sc-for>
+        </div>
+        <!-- listing -->
+        <div style="flex: 1 1 auto; overflow-y: auto; padding: 8px 12px;">
+          <sc-for list="{{ pickerItems }}" as="it" hint-placeholder-count="6">
+            <button class="sd-file" onClick="{{ it.open }}" style="width: 100%; text-align: left; appearance: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line-soft); background: {{ it.bg }};">
+              <span style="width: 18px; height: 18px; display:flex; color: {{ it.iconColor }};" dangerouslySetInnerHTML="{{ it.icon }}"></span>
+              <span style="flex: 1 1 auto; min-width: 0; font-size: .84rem; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ it.name }}</span>
+              <span style="font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .06em; color: var(--ink-faint);">{{ it.meta }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <!-- footer -->
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-top: 1px solid var(--line-soft); background: color-mix(in oklch, var(--bg-2) 70%, transparent);">
+          <div style="min-width: 0; font-family: var(--ff-mono); font-size: .66rem; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ pickerPath }}</div>
+          <div style="display: flex; gap: 10px; flex: 0 0 auto;">
+            <button class="sl-btn sl-btn--quiet sl-btn--sm" onClick="{{ closePicker }}">İptal</button>
+            <button class="sl-btn sl-btn--sm" onClick="{{ confirmPicker }}">Bu klasörü seç</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1180, &quot;height&quot;: 820}, &quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;options&quot;: [&quot;#5fd6b6&quot;, &quot;#3fb8c7&quot;, &quot;#9bd65f&quot;, &quot;#e0a458&quot;], &quot;default&quot;: &quot;#5fd6b6&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;version&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;0.1.3&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    activeId: 'docs',
+    running: true,
+    pct: 64,
+    transferredMiB: 308,
+    files: 24,
+    settingsOpen: false,
+    settingsTab: 'interface',
+    lang: 'tr',
+    accentName: 'Mint',
+    wizardOpen: false,
+    wizStep: 1,
+    wizType: null,
+    wizName: '',
+    wizCred: '',
+    pickerOpen: false,
+    pickerStack: ['Yedekler'],
+  };
+
+  // ---------- static data ----------
+  CLIENTS = [
+    { id: 'gdrive', name: 'İş Drive', type: 'Google Drive', remote: 'isdrive:', status: 'bağlı', glyph: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 2.5 13l3 5 5.5-10z"/><path d="M16 3H8l8 14h-5"/><path d="M21.5 13 16 3l-2.7 5 5.4 10z" opacity=".55"/></svg>' },
+    { id: 's3', name: 'Arşiv S3', type: 'Amazon S3', remote: 'arsiv:', status: 'bağlı', glyph: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5 12 4l7 2.5"/><path d="M5 6.5v11L12 20l7-2.5v-11"/><path d="M5 6.5 12 9l7-2.5M12 9v11"/></svg>' },
+    { id: 'b2', name: 'Soğuk depo', type: 'Backblaze B2', remote: 'b2cold:', status: 'bağlı', glyph: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1.4.5-2.4 1.2-3.4"/><circle cx="12" cy="14" r="2"/></svg>' },
+  ];
+
+  PROFILES = [
+    { id: 'docs', name: 'Belgeler yedeği', src: '/Users/emir/Documents', clientId: 'gdrive', sub: 'Yedekler/Belgeler', mode: 'mirror' },
+    { id: 'photos', name: 'Fotoğraf arşivi', src: '/Users/emir/Pictures', clientId: 's3', sub: 'foto-2026', mode: 'copy' },
+    { id: 'code', name: 'Proje kaynağı', src: '/Users/emir/Code/sidrelabs', clientId: 'b2', sub: 'kod/snapshot', mode: 'mirror' },
+  ];
+
+  PROVIDER_TYPES = [
+    { id: 'gdrive', name: 'Google Drive', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3 2.5 13l3 5 5.5-10z"/><path d="M16 3H8l8 14h-5"/><path d="M21.5 13 16 3l-2.7 5 5.4 10z" opacity=".55"/></svg>' },
+    { id: 'dropbox', name: 'Dropbox', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 2 7.5 7 11l5-3.5z"/><path d="M17 4 12 7.5 17 11l5-3.5z"/><path d="M2 14.5 7 11l5 3.5L7 18z"/><path d="M22 14.5 17 11l-5 3.5L17 18z"/></svg>' },
+    { id: 's3', name: 'Amazon S3', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.5 12 4l7 2.5v11L12 20l-7-2.5z"/><path d="M5 6.5 12 9l7-2.5M12 9v11"/></svg>' },
+    { id: 'b2', name: 'Backblaze B2', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1.4.5-2.4 1.2-3.4"/><circle cx="12" cy="14" r="2"/></svg>' },
+    { id: 'sftp', name: 'SFTP / SSH', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>' },
+    { id: 'webdav', name: 'WebDAV', g: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>' },
+  ];
+
+  FOLDER_ICO = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+  FILE_ICO = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>';
+  CLOUD_ICO = '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 17.6A4 4 0 0 0 16 10h-1.3A6 6 0 1 0 4 15.5"/></svg>';
+
+  PICKER_TREE = {
+    'Yedekler': [
+      { name: 'Belgeler', type: 'dir', meta: '128 öğe' },
+      { name: 'Fotoğraflar', type: 'dir', meta: '2.104 öğe' },
+      { name: 'Arşiv-2025', type: 'dir', meta: '54 öğe' },
+      { name: 'notlar.txt', type: 'file', meta: '12 KB' },
+    ],
+    'Belgeler': [
+      { name: 'Sözleşmeler', type: 'dir', meta: '18 öğe' },
+      { name: 'Faturalar', type: 'dir', meta: '96 öğe' },
+      { name: 'rapor-q1.pdf', type: 'file', meta: '2.4 MB' },
+    ],
+  };
+
+  LANGS = [
+    { id: 'en', name: 'English', flag: '🇬🇧' }, { id: 'tr', name: 'Türkçe', flag: '🇹🇷' },
+    { id: 'de', name: 'Deutsch', flag: '🇩🇪' }, { id: 'es', name: 'Español', flag: '🇪🇸' },
+    { id: 'zh', name: '中文', flag: '🇨🇳' }, { id: 'ja', name: '日本語', flag: '🇯🇵' },
+    { id: 'ru', name: 'Русский', flag: '🇷🇺' }, { id: 'nl', name: 'Nederlands', flag: '🇳🇱' },
+    { id: 'ar', name: 'العربية', flag: '🇸🇦' },
+  ];
+
+  ACCENTS = [
+    { name: 'Mint', color: '#5fd6b6' }, { name: 'Teal', color: '#3fb8c7' },
+    { name: 'Lime', color: '#9bd65f' }, { name: 'Amber', color: '#e0a458' },
+  ];
+
+  // ---------- lifecycle ----------
+  componentDidMount() {
+    this._iv = setInterval(() => {
+      if (!this.state.running) return;
+      this.setState(s => {
+        let pct = s.pct + 1.4;
+        let transferredMiB = s.transferredMiB + 6.8;
+        let files = s.files;
+        if (pct >= 100) { pct = 4; transferredMiB = 8; files = s.files + 1; }
+        else if (Math.random() > 0.78) files = s.files + 1;
+        return { pct, transferredMiB, files };
+      });
+    }, 900);
+  }
+  componentWillUnmount() { clearInterval(this._iv); }
+
+  ico(d) { return { __html: '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>' }; }
+
+  accentHex() { const a = this.ACCENTS.find(x => x.name === this.state.accentName); return a ? a.color : '#5fd6b6'; }
+  activeProfile() { return this.PROFILES.find(p => p.id === this.state.activeId) || this.PROFILES[0]; }
+  clientById(id) { return this.CLIENTS.find(c => c.id === id); }
+
+  renderVals() {
+    const accent = this.props.accent || this.accentHex();
+    const ap = this.activeProfile();
+    const apClient = this.clientById(ap.clientId);
+    const running = this.state.running;
+
+    // sidebar profiles
+    const profiles = this.PROFILES.map(p => {
+      const on = p.id === this.state.activeId;
+      const cl = this.clientById(p.clientId);
+      return {
+        name: p.name,
+        remote: (cl ? cl.remote : '') + p.sub,
+        bar: on ? accent : 'transparent',
+        bg: on ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'transparent',
+        icoColor: on ? accent : 'var(--ink-dim)',
+        titleColor: on ? 'var(--ink)' : 'var(--ink-dim)',
+        modeTag: p.mode === 'mirror' ? 'Ayna' : 'Kopya',
+        modeColor: on ? accent : 'var(--ink-faint)',
+        modeBorder: on ? 'var(--line)' : 'var(--line-soft)',
+        select: () => this.setState({ activeId: p.id }),
+      };
+    });
+
+    // client chips
+    const clientChips = this.CLIENTS.map(c => {
+      const on = c.id === ap.clientId;
+      return {
+        name: c.name, remote: c.remote,
+        icon: { __html: c.glyph },
+        glyphColor: on ? accent : 'var(--ink-dim)',
+        border: on ? 'var(--accent)' : 'var(--line-soft)',
+        bg: on ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'transparent',
+        color: on ? 'var(--ink)' : 'var(--ink-dim)',
+        select: () => { ap.clientId = c.id; this.forceUpdate(); },
+      };
+    });
+
+    // modes
+    const modes = [
+      { id: 'mirror', title: 'Ayna sync', cmd: 'sync', desc: 'Hedefi kaynakla birebir aynalar. Kaynakta olmayan dosyalar hedefte de silinir.' },
+      { id: 'copy', title: 'Sadece kopyala', cmd: 'copy', desc: 'Dosyaları yalnızca ekler, hiçbir şeyi silmez. Güvenli ve geri dönüşsüz veri kaybı yok.' },
+    ].map(m => {
+      const on = m.id === ap.mode;
+      return { ...m,
+        border: on ? 'var(--accent)' : 'var(--line-soft)',
+        bg: on ? 'color-mix(in oklch, var(--accent) 8%, transparent)' : 'transparent',
+        dot: on ? accent : 'var(--ink-faint)',
+        dotFill: on ? accent : 'transparent',
+        titleColor: on ? 'var(--ink)' : 'var(--ink-dim)',
+        select: () => { ap.mode = m.id; this.forceUpdate(); },
+      };
+    });
+
+    // options
+    const optDefs = this.state._opts || (this.state._opts = { check: true, dryrun: false, bwlimit: true });
+    const optList = [
+      { id: 'check', label: 'Aktarım sonrası doğrula', hint: 'Sağlama toplamlarını karşılaştır', flag: '--checksum' },
+      { id: 'dryrun', label: 'Önce kuru çalışma', hint: 'Hiçbir şey yazmadan değişiklikleri göster', flag: '--dry-run' },
+      { id: 'bwlimit', label: 'Bant genişliği sınırı', hint: 'Çalışırken 8 MiB/s ile sınırla', flag: '--bwlimit 8M' },
+    ];
+    const options = optList.map(o => {
+      const on = optDefs[o.id];
+      return { label: o.label, hint: o.hint, flag: o.flag,
+        flagColor: on ? accent : 'var(--ink-faint)',
+        trackBg: on ? accent : 'color-mix(in oklch, var(--ink) 12%, transparent)',
+        knobBg: on ? 'var(--accent-ink)' : 'var(--ink-dim)',
+        knobX: on ? '18px' : '2px',
+        toggle: () => { optDefs[o.id] = !optDefs[o.id]; this.forceUpdate(); },
+      };
+    });
+
+    // status bar
+    const pct = Math.round(this.state.pct);
+    const eqBars = Array.from({ length: 22 }, (_, i) => ({
+      base: (0.25 + ((i * 37) % 70) / 100).toFixed(2),
+      color: i % 3 === 0 ? accent : 'color-mix(in oklch, var(--accent) 45%, transparent)',
+      dur: (0.7 + ((i * 13) % 9) / 10).toFixed(2) + 's',
+      delay: '-' + ((i * 7) % 11) / 10 + 's',
+    }));
+
+    // wizard
+    const wt = this.state.wizType ? this.PROVIDER_TYPES.find(p => p.id === this.state.wizType) : null;
+    const providerTypes = this.PROVIDER_TYPES.map(p => {
+      const on = p.id === this.state.wizType;
+      return { name: p.name, icon: { __html: p.g },
+        color: on ? accent : 'var(--ink-dim)',
+        border: on ? 'var(--accent)' : 'var(--line-soft)',
+        bg: on ? 'color-mix(in oklch, var(--accent) 8%, transparent)' : 'var(--surface)',
+        select: () => this.setState({ wizType: p.id }),
+      };
+    });
+    const credMap = {
+      gdrive: { label: 'OAuth istemci kimliği (opsiyonel)', ph: 'boş bırak → tarayıcı ile yetkilendir', auth: 'Tarayıcıda yetkilendir' },
+      dropbox: { label: 'OAuth jetonu (opsiyonel)', ph: 'boş bırak → tarayıcı ile yetkilendir', auth: 'Tarayıcıda yetkilendir' },
+      s3: { label: 'Erişim anahtarı', ph: 'AKIA…', auth: 'Bağlantıyı test et' },
+      b2: { label: 'Hesap kimliği', ph: '0012ab…', auth: 'Bağlantıyı test et' },
+      sftp: { label: 'Sunucu', ph: 'kullanici@host:22', auth: 'Bağlantıyı test et' },
+      webdav: { label: 'URL', ph: 'https://dav.ornek.com/remote.php', auth: 'Bağlantıyı test et' },
+    };
+    const cm = wt ? credMap[wt.id] : { label: '', ph: '', auth: 'Doğrula' };
+    const wizNameFinal = this.state.wizName || (wt ? wt.name : 'Yeni istemci');
+    const remoteSlug = wizNameFinal.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'yeni';
+
+    // build CLI preview
+    let wizCli = '$ syncdeck engine · hazır';
+    if (wt) {
+      const typeMap = { gdrive: 'drive', dropbox: 'dropbox', s3: 's3', b2: 'b2', sftp: 'sftp', webdav: 'webdav' };
+      const extra = this.state.wizCred ? '  \\\n    --' + (wt.id === 's3' ? 'access-key-id' : wt.id === 'sftp' ? 'host' : 'key') + ' "' + this.state.wizCred + '"' : '';
+      wizCli = 'config create "' + remoteSlug + '" ' + typeMap[wt.id] + extra;
+    }
+
+    const wizReview = wt ? [
+      { k: 'Ad', v: wizNameFinal },
+      { k: 'Tür', v: wt.name },
+      { k: 'Remote', v: remoteSlug + ':' },
+    ] : [];
+
+    // settings tabs
+    const tabs = [
+      { id: 'interface', label: 'Arayüz', icon: this.ico('<circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17"/><path d="M12 3a13 13 0 0 1 0 18 13 13 0 0 1 0-18z"/>') },
+      { id: 'clients', label: 'İstemciler', icon: this.ico('<path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>') },
+      { id: 'about', label: 'Hakkında', icon: this.ico('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>') },
+    ];
+    const settingsTabs = tabs.map(t => {
+      const on = t.id === this.state.settingsTab;
+      return { label: t.label, icon: t.icon,
+        bar: on ? accent : 'transparent',
+        bg: on ? 'color-mix(in oklch, var(--accent) 12%, transparent)' : 'transparent',
+        color: on ? 'var(--ink)' : 'var(--ink-dim)',
+        select: () => this.setState({ settingsTab: t.id }),
+      };
+    });
+
+    const languages = this.LANGS.map(l => {
+      const on = l.id === this.state.lang;
+      return { name: l.name, flag: l.flag,
+        border: on ? 'var(--accent)' : 'var(--line-soft)',
+        bg: on ? 'color-mix(in oklch, var(--accent) 10%, transparent)' : 'transparent',
+        color: on ? 'var(--ink)' : 'var(--ink-dim)',
+        select: () => this.setState({ lang: l.id }),
+      };
+    });
+    const accentSwatches = this.ACCENTS.map(a => ({
+      name: a.name, color: a.color,
+      ring: a.name === this.state.accentName ? 'var(--ink)' : 'transparent',
+      select: () => this.setState({ accentName: a.name }),
+    }));
+    const clientList = this.CLIENTS.map(c => ({ name: c.name, type: c.type, remote: c.remote, status: c.status, icon: { __html: c.glyph } }));
+
+    // picker
+    const stack = this.state.pickerStack;
+    const curFolder = stack[stack.length - 1];
+    const items = (this.PICKER_TREE[curFolder] || []).map(it => ({
+      name: it.name, meta: it.meta,
+      icon: { __html: it.type === 'dir' ? this.FOLDER_ICO : this.FILE_ICO },
+      iconColor: it.type === 'dir' ? accent : 'var(--ink-faint)',
+      bg: 'transparent',
+      open: () => { if (it.type === 'dir' && this.PICKER_TREE[it.name]) this.setState({ pickerStack: [...stack, it.name] }); },
+    }));
+    const crumbs = stack.map((c, i) => ({
+      name: c, sep: i < stack.length - 1 ? '/' : '',
+      color: i === stack.length - 1 ? 'var(--accent)' : 'var(--ink-dim)',
+      go: () => this.setState({ pickerStack: stack.slice(0, i + 1) }),
+    }));
+
+    return {
+      accent,
+      connLabel: running ? 'Bağlı · aktarılıyor' : 'Bağlı · boşta',
+      profileCount: String(this.PROFILES.length).padStart(2, '0'),
+      clientCountLabel: this.CLIENTS.length + ' istemci · ' + (apClient ? apClient.remote : ''),
+      profiles, clientChips, modes, options,
+
+      activeName: ap.name,
+      srcPath: ap.src,
+      destPath: (apClient ? apClient.remote : '') + ap.sub,
+      runLabel: running ? '■ Durdur' : '▶ Şimdi çalıştır',
+      toggleRun: () => this.setState({ running: !this.state.running }),
+      saveProfile: () => {},
+      browseLocal: () => {},
+      openPicker: () => this.setState({ pickerOpen: true, pickerStack: ['Yedekler'] }),
+      addClient: () => this.setState({ settingsOpen: true, settingsTab: 'clients' }),
+      newProfile: () => {},
+
+      // status bar
+      statusDot: running ? accent : 'var(--ink-faint)',
+      statusText: running ? 'Senkronize ediliyor' : 'Beklemede',
+      eqBars, eqState: running ? 'running' : 'paused',
+      speedText: running ? '7.6 MiB/s' : '—',
+      transferText: this.state.transferredMiB.toFixed(0) + ' / 482 MiB',
+      pct, pctText: pct + '%',
+      filesText: this.state.files + ' / 38',
+      etaText: running ? '00:42' : '—',
+      logDot: running ? accent : 'var(--ink-faint)',
+      logTime: '14:32:' + String(8 + (this.state.files % 50)).padStart(2, '0'),
+      logText: 'Transferred:   ' + this.state.transferredMiB.toFixed(2) + ' MiB / 482.18 MiB, ' + pct + '%\n'
+        + 'Checks:         ' + this.state.files + ' / 38, ' + Math.round(this.state.files / 38 * 100) + '%\n'
+        + (running ? '↻ ' + ap.name + ' · ' + (apClient ? apClient.remote : '') + ap.sub + ' aktarılıyor…' : '✓ Son çalışma tamamlandı · 0 hata'),
+
+      // settings
+      settingsOpen: this.state.settingsOpen,
+      openSettings: () => this.setState({ settingsOpen: true }),
+      closeSettings: () => this.setState({ settingsOpen: false }),
+      settingsTabs,
+      tabInterface: this.state.settingsTab === 'interface',
+      tabClients: this.state.settingsTab === 'clients',
+      tabAbout: this.state.settingsTab === 'about',
+      languages, accentSwatches, clientList,
+      version: this.props.version || '0.1.3',
+      startWizard: () => this.setState({ wizardOpen: true, wizStep: 1, wizType: null, wizName: '', wizCred: '' }),
+
+      // wizard
+      wizardOpen: this.state.wizardOpen,
+      closeWizard: () => this.setState({ wizardOpen: false }),
+      wizStepNum: this.state.wizStep,
+      wizStep1: this.state.wizStep === 1,
+      wizStep2: this.state.wizStep === 2,
+      wizStep3: this.state.wizStep === 3,
+      wizTitle: ['Bağlantı türü', 'Kimlik & ad', 'Gözden geçir & oluştur'][this.state.wizStep - 1],
+      wizRail: [1, 2, 3].map(n => ({ color: n <= this.state.wizStep ? accent : 'var(--line-soft)' })),
+      providerTypes,
+      wizName: this.state.wizName,
+      onWizName: (e) => this.setState({ wizName: e.target.value }),
+      wizCred: this.state.wizCred,
+      onWizCred: (e) => this.setState({ wizCred: e.target.value }),
+      wizCredLabel: cm.label, wizCredPlaceholder: cm.ph, wizAuthLabel: cm.auth,
+      wizReview, wizCli,
+      wizBackVis: this.state.wizStep > 1 ? 'visible' : 'hidden',
+      wizBack: () => this.setState({ wizStep: Math.max(1, this.state.wizStep - 1) }),
+      wizNextLabel: this.state.wizStep === 3 ? 'İstemciyi oluştur' : (this.state.wizStep === 1 ? 'Devam →' : 'Devam →'),
+      wizNext: () => {
+        if (this.state.wizStep === 1 && !this.state.wizType) return;
+        if (this.state.wizStep < 3) this.setState({ wizStep: this.state.wizStep + 1 });
+        else this.setState({ wizardOpen: false });
+      },
+
+      // picker
+      pickerOpen: this.state.pickerOpen,
+      closePicker: () => this.setState({ pickerOpen: false }),
+      confirmPicker: () => { ap.sub = stack.join('/'); this.setState({ pickerOpen: false }); },
+      pickerClient: apClient ? apClient.name : 'Bulut',
+      pickerIcon: { __html: apClient ? apClient.glyph : this.CLOUD_ICO },
+      pickerItems: items, crumbs,
+      pickerPath: (apClient ? apClient.remote : '') + stack.join('/'),
+    };
+  }
+}
+</script>
+</body>
+</html>
