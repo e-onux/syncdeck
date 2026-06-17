@@ -13,6 +13,10 @@ jobs:
   build:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    # The desktop app lives in app/ within the monorepo.
+    defaults:
+      run:
+        working-directory: app
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +40,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: app/package-lock.json
       - run: npm ci
       - run: npm run download:rclone
         env:
@@ -49,12 +54,12 @@ jobs:
         with:
           name: syncdeck-${{ matrix.name }}
           path: |
-            release/*.dmg
-            release/*-mac.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/latest*.yml
+            app/release/*.dmg
+            app/release/*-mac.zip
+            app/release/*.exe
+            app/release/*.AppImage
+            app/release/*.deb
+            app/release/latest*.yml
 
   publish:
     name: Publish GitHub release
