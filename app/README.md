@@ -4,16 +4,49 @@ SyncDeck is a cross-platform Ionic + React + Electron desktop app that provides 
 
 Important attribution: `rclone` is an independent open-source project maintained by the rclone developers. SyncDeck depends on rclone, calls rclone commands, and gives explicit credit in the About dialog.
 
+## Installing a release
+
+Download the build for your OS from [Releases](https://github.com/e-onux/syncdeck/releases). rclone ships inside the app — no separate install.
+
+Because the app is distributed **unsigned** (free, no Apple Developer account), each OS shows a one-time prompt:
+
+- **macOS** — if you see *"SyncDeck is damaged and can't be opened"* (German: *"ist beschädigt"*), the file is **not** corrupt — it is only Gatekeeper quarantine on an unsigned app. Drag the app to `Applications`, then run once:
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/SyncDeck.app
+  ```
+  It then opens normally. The bundled rclone inside the app is un-quarantined by the same recursive command.
+- **Windows** — on *"Windows protected your PC"*, click **More info → Run anyway**.
+- **Linux** — make the AppImage executable (`chmod +x SyncDeck-*.AppImage`) or install the `.deb`.
+
+### Signing & notarization (optional, removes the macOS prompt)
+
+To make macOS downloads open with no command, build with an Apple Developer ID. Add these repo secrets and the release workflow signs (and notarizes) automatically:
+
+- `CSC_LINK` — base64 of your Developer ID `.p12`
+- `CSC_KEY_PASSWORD` — the `.p12` password
+- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` — for notarization
+
 ## Current Features
 
 - Sync profiles with source, destination, mode, extra rclone arguments, and startup enablement.
-- `rclone sync` and `rclone copy` execution without mounting.
-- Native folder picker for local paths.
+- Transfer operations without mounting: `sync`, `copy`, `move`, `bisync` (with
+  automatic first-run `--resync`), and `check`.
+- Live progress streaming during a run (bytes, %, speed, ETA, file count) parsed
+  from `--use-json-log`, plus a readable live log and a working **Stop** button
+  (`sync:cancel`).
+- Native folder picker for local paths; cloud file picker via `rclone lsjson`.
+- Client wizard that creates real remotes:
+  - Per-provider field schemas for S3, B2, SFTP, WebDAV, and an encrypted
+    `crypt` remote — passwords stored obscured (`--obscure`).
+  - Real OAuth for Drive/Dropbox via `rclone authorize` (browser flow, token
+    capture).
+  - Connection test (`rclone lsd`, also via on-the-fly connection strings) and
+    per-client delete (`rclone config delete`).
+- Settings → Clients shows per-client quota/free space (`rclone about`).
 - Startup sync support:
   - macOS: LaunchAgent
   - Windows/macOS packaged builds: Electron login item support
-- Remote/client panel that can call `rclone config create`.
-- Remote listing via `rclone listremotes`.
+- Remote listing via `rclone listremotes` + `rclone config dump`.
 - Multilanguage UI foundation: `en`, `es`, `de`, `nl`, `zh`, `tr`, `ja`, `ar`, `ru`.
 - Standalone build scripts for macOS, Windows, and Linux via Electron Builder.
 
@@ -69,10 +102,17 @@ npm run bundle:linux
 
 ## Roadmap To Complete rclone Wrapper
 
-- Provider-specific remote wizards for Drive, Dropbox, OneDrive, S3, B2, SFTP, WebDAV, SMB, Proton Drive, and more.
-- OAuth browser callback capture where the provider allows it.
-- GUI coverage for copy, sync, move, bisync, check, mount, serve, crypt, obscure, dedupe, purge, cleanup, ls/json, size, config edit/delete, and backend-specific flags.
-- Job queue, scheduler, dry-run preview, conflict policy, bandwidth controls, progress streaming, and log history.
+Done: provider wizards (Drive, Dropbox, S3, B2, SFTP, WebDAV, crypt) with OAuth
+capture and `--obscure`; copy/sync/move/bisync/check; dry-run, bandwidth, and
+checksum toggles; live progress streaming; `lsjson` picker; `about` quota;
+config create/delete. Still to do:
+
+- More backends in the wizard (OneDrive, SMB, Proton Drive, Box, pCloud …) and
+  backend-specific flag forms.
+- Long-running `mount` / `serve` with a dedicated daemon panel.
+- Scheduler (interval/cron per profile), job queue, and conflict-policy presets.
+- Persistent run/log history and additional ops (`dedupe`, `purge`, `cleanup`,
+  `size`).
 
 ## UI / Design
 

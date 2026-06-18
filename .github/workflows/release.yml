@@ -42,6 +42,7 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npm run download:rclone
         env:
           RCLONE_TARGETS: ${{ matrix.rclone_targets }}
@@ -50,6 +51,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RCLONE_TARGETS: ${{ matrix.rclone_targets }}
+          # Optional macOS Developer ID signing — when these repo secrets are set,
+          # electron-builder signs (and, with the Apple* vars, notarizes) the app
+          # so downloads open without the "is damaged" quarantine prompt. When
+          # empty (the default), the build is ad-hoc signed and users clear the
+          # quarantine once (see the release notes).
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       - uses: actions/upload-artifact@v4
         with:
           name: syncdeck-${{ matrix.name }}
@@ -74,3 +85,24 @@ jobs:
         with:
           files: artifacts/**/*
           generate_release_notes: true
+          append_body: true
+          body: |
+            ## İlk açılış / First launch
+
+            SyncDeck imzasız dağıtılır (ücretsiz, Apple Developer hesabı olmadan).
+            İşletim sistemin uyarı gösterirse, tek seferlik adımlar aşağıda.
+
+            **macOS** — "SyncDeck beschädigt / is damaged" derse, bu **bozuk dosya değildir**;
+            sadece Gatekeeper karantinasıdır. DMG'den uygulamayı `Applications`'a sürükle, sonra
+            Terminal'de bir kez çalıştır:
+            ```bash
+            xattr -dr com.apple.quarantine /Applications/SyncDeck.app
+            ```
+            Ardından normal şekilde açılır. (Sürümlü/notarize edilmiş yapı için README'ye bak.)
+
+            **Windows** — "Windows protected your PC" çıkarsa: **More info → Run anyway**.
+
+            **Linux** — AppImage'i çalıştırılabilir yap: `chmod +x SyncDeck-*.AppImage`, ya da `.deb` paketini kur.
+
+            ---
+            rclone uygulamayla birlikte gelir; ayrıca kurman gerekmez.
