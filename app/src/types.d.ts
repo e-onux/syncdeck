@@ -1,4 +1,4 @@
-export type SyncMode = 'sync' | 'copy';
+export type SyncMode = 'sync' | 'copy' | 'move' | 'bisync' | 'check';
 
 export type SyncProfile = {
   id: string;
@@ -39,11 +39,31 @@ export type RemoteDraft = {
   type: string;
   clientId?: string;
   clientSecret?: string;
+  token?: string;
   options?: Array<{
     key: string;
     value: string;
   }>;
   extraArgs?: string;
+};
+
+export type AuthorizePayload = {
+  type: string;
+  clientId?: string;
+  clientSecret?: string;
+};
+
+export type TestResult = {
+  ok: boolean;
+  message?: string;
+};
+
+export type AboutInfo = {
+  supported: boolean;
+  total?: string;
+  used?: string;
+  free?: string;
+  message?: string;
 };
 
 export type RemoteEntry = {
@@ -60,6 +80,9 @@ export type SyncProgress = {
   eta?: string;
   transferred?: string;
   total?: string;
+  files?: number;
+  totalFiles?: number;
+  errors?: number;
 };
 
 declare global {
@@ -70,8 +93,13 @@ declare global {
       deleteProfile: (id: string) => Promise<AppState>;
       chooseFolder: () => Promise<string | null>;
       runSync: (id: string) => Promise<AppState>;
+      cancelSync: (id: string) => Promise<boolean>;
       setLaunchAtLogin: (enabled: boolean) => Promise<AppState>;
       createRemote: (remote: RemoteDraft) => Promise<AppState>;
+      authorizeRemote: (payload: AuthorizePayload) => Promise<string>;
+      testRemote: (target: string) => Promise<TestResult>;
+      deleteRemote: (name: string) => Promise<AppState>;
+      aboutRemote: (name: string) => Promise<AboutInfo>;
       listRemote: (remotePath: string) => Promise<RemoteEntry[]>;
       openExternal: (url: string) => Promise<void>;
       openAbout: () => Promise<void>;

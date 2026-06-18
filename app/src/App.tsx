@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { IonApp } from '@ionic/react'
 import type {
+  AboutInfo,
   AppState,
   RemoteClient,
   RemoteDraft,
@@ -10,9 +11,19 @@ import type {
   SyncProfile,
   SyncProgress,
 } from './types'
+import {
+  OPTION_FLAGS,
+  buildConnString,
+  clientLabel,
+  formatSize,
+  hasFlag,
+  remoteOf,
+  setFlag,
+} from './lib/rclone'
+import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.1.3'
+const VERSION = '0.2.0'
 
 /* ============================================================ demo fallback (browser dev) */
 const demoProfile: SyncProfile = {
@@ -58,7 +69,21 @@ const demoApi: Window['rcloneSyncer'] = {
       },
     }),
   setLaunchAtLogin: async (enabled) => demoState({ launchAtLogin: enabled }),
-  createRemote: async (remote) => demoState({ remotes: [`${remote.name}:`, 'isdrive:', 'arsiv:', 'b2cold:'] }),
+  createRemote: async (remote) =>
+    demoState({
+      remotes: [`${remote.name}:`, 'isdrive:', 'arsiv:', 'b2cold:'],
+      clients: [
+        { name: `${remote.name}:`, type: remote.type },
+        { name: 'isdrive:', type: 'drive' },
+        { name: 'arsiv:', type: 's3' },
+        { name: 'b2cold:', type: 'b2' },
+      ],
+    }),
+  cancelSync: async () => true,
+  authorizeRemote: async () => '{"access_token":"demo","token_type":"Bearer","expiry":"2030-01-01T00:00:00Z"}',
+  testRemote: async () => ({ ok: true }),
+  deleteRemote: async () => demoState({ remotes: ['isdrive:', 'arsiv:'], clients: [{ name: 'isdrive:', type: 'drive' }, { name: 'arsiv:', type: 's3' }] }),
+  aboutRemote: async () => ({ supported: true, total: '5 TiB', used: '2.9 TiB', free: '2.1 TiB' }),
   listRemote: async () => [
     { name: 'Belgeler', isDir: true, size: -1 },
     { name: 'Fotoğraflar', isDir: true, size: -1 },
@@ -121,6 +146,18 @@ const tr = {
   copyOnly: 'Sadece kopyala',
   mirrorDesc: 'Hedefi kaynakla birebir aynalar. Kaynakta olmayan dosyalar hedefte de silinir.',
   copyDesc: 'Dosyaları yalnızca ekler, hiçbir şeyi silmez. Güvenli ve geri dönüşsüz veri kaybı yok.',
+  moveTitle: 'Taşı',
+  moveDesc: 'Dosyaları hedefe taşır; başarıyla aktarılanlar kaynaktan silinir.',
+  bisyncTitle: 'Çift yönlü',
+  bisyncDesc: 'İki konumu çift yönlü eşitler; ilk çalıştırmada güvenli kurulum (resync) yapılır.',
+  checkTitle: 'Doğrula',
+  checkDesc: 'Hiçbir şey yazmadan kaynak ile hedefi karşılaştırır, farkları raporlar.',
+  tagMirror: 'Ayna',
+  tagCopy: 'Kopya',
+  tagMove: 'Taşı',
+  tagBisync: 'Çift',
+  tagCheck: 'Test',
+  quotaFree: 'boş',
   schedule: 'Zamanlama & seçenekler',
   optChecksumLabel: 'Aktarım sonrası doğrula',
   optChecksumHint: 'Sağlama toplamlarını karşılaştır',
@@ -182,6 +219,20 @@ const tr = {
   engineUnavailable: 'SyncDeck motoru çalışmıyor',
   engineUnavailableDetail: 'Paketli senkron motoru başlatılamadı. SyncDeck’i yeniden kur veya motor dahil olacak şekilde tekrar derle.',
   retry: 'Tekrar dene',
+  wizAuthorize: 'Tarayıcıda yetkilendir',
+  wizAuthorizing: 'Yetkilendiriliyor…',
+  wizAuthorized: 'Yetkilendirildi',
+  wizReauthorize: 'Yeniden yetkilendir',
+  wizOauthNote: 'Tarayıcıda yetkilendir; SyncDeck erişim jetonunu yerel motor yapılandırmanda güvenle saklar.',
+  wizTest: 'Bağlantıyı test et',
+  wizTesting: 'Test ediliyor…',
+  wizTestOk: 'Bağlantı başarılı',
+  wizTestFail: 'Bağlantı başarısız',
+  wizOptional: 'opsiyonel',
+  wizNeedAuth: 'Devam etmeden önce tarayıcıda yetkilendir.',
+  testClient: 'Test et',
+  deleteClientLabel: 'Sil',
+  deleteClientConfirm: (name: string) => `"${name}" istemcisi silinsin mi? Bu işlem geri alınamaz.`,
 }
 type Copy = typeof tr
 
@@ -211,6 +262,18 @@ const en: Copy = {
   copyOnly: 'Copy only',
   mirrorDesc: 'Mirrors the destination to the source. Files not in the source are deleted at the destination.',
   copyDesc: 'Only adds files, deletes nothing. Safe — no irreversible data loss.',
+  moveTitle: 'Move',
+  moveDesc: 'Moves files to the destination; successfully transferred files are removed from the source.',
+  bisyncTitle: 'Bi-directional',
+  bisyncDesc: 'Keeps both locations in sync both ways; the first run does a safe baseline resync.',
+  checkTitle: 'Check',
+  checkDesc: 'Compares source and destination without writing anything, and reports differences.',
+  tagMirror: 'Mirror',
+  tagCopy: 'Copy',
+  tagMove: 'Move',
+  tagBisync: 'Bi-dir',
+  tagCheck: 'Check',
+  quotaFree: 'free',
   schedule: 'Scheduling & options',
   optChecksumLabel: 'Verify after transfer',
   optChecksumHint: 'Compare checksums',
@@ -272,6 +335,20 @@ const en: Copy = {
   engineUnavailable: 'SyncDeck engine unavailable',
   engineUnavailableDetail: 'The bundled sync engine could not start. Reinstall SyncDeck or rebuild it with the engine included.',
   retry: 'Retry',
+  wizAuthorize: 'Authorize in browser',
+  wizAuthorizing: 'Authorizing…',
+  wizAuthorized: 'Authorized',
+  wizReauthorize: 'Re-authorize',
+  wizOauthNote: 'Authorize in your browser; SyncDeck stores the access token securely in your local engine config.',
+  wizTest: 'Test connection',
+  wizTesting: 'Testing…',
+  wizTestOk: 'Connection OK',
+  wizTestFail: 'Connection failed',
+  wizOptional: 'optional',
+  wizNeedAuth: 'Authorize in your browser before continuing.',
+  testClient: 'Test',
+  deleteClientLabel: 'Delete',
+  deleteClientConfirm: (name) => `Delete client "${name}"? This cannot be undone.`,
 }
 
 const TRANSLATIONS: Record<Language, Copy> = {
@@ -286,32 +363,6 @@ const TRANSLATIONS: Record<Language, Copy> = {
   ar: { ...en, save: 'حفظ', run: '▶ شغّل الآن', settings: 'الإعدادات', profiles: 'الملفات' },
 }
 
-/* ============================================================ option <-> extraArgs mapping */
-type OptionId = 'checksum' | 'dryrun' | 'bwlimit'
-const OPTION_FLAGS: Record<OptionId, string> = {
-  checksum: '--checksum',
-  dryrun: '--dry-run',
-  bwlimit: '--bwlimit 8M',
-}
-
-function tokenize(input: string): string[] {
-  return input.match(/(?:[^\s"]+|"[^"]*")+/g) || []
-}
-function hasFlag(extra: string, flag: string): boolean {
-  return tokenize(extra).includes(flag.split(' ')[0])
-}
-function setFlag(extra: string, flag: string, on: boolean): string {
-  const tokens = tokenize(extra)
-  const parts = flag.split(' ')
-  const name = parts[0]
-  const idx = tokens.indexOf(name)
-  if (on) {
-    if (idx === -1) tokens.push(...parts)
-  } else if (idx !== -1) {
-    tokens.splice(idx, parts.length > 1 ? 2 : 1)
-  }
-  return tokens.join(' ')
-}
 
 /* ============================================================ wizard providers */
 const PROVIDER_TYPES = [
@@ -321,16 +372,74 @@ const PROVIDER_TYPES = [
   { id: 'b2', name: 'Backblaze B2' },
   { id: 'sftp', name: 'SFTP / SSH' },
   { id: 'webdav', name: 'WebDAV' },
+  { id: 'crypt', name: 'Şifreli (crypt)' },
 ] as const
 type ProviderId = (typeof PROVIDER_TYPES)[number]['id']
 
-const CRED_MAP: Record<ProviderId, { label: string; ph: string; auth: string; cliFlag: string; oauth: boolean }> = {
-  drive: { label: 'OAuth istemci kimliği (opsiyonel)', ph: 'boş bırak → tarayıcı ile yetkilendir', auth: 'Tarayıcıda yetkilendir', cliFlag: 'client_id', oauth: true },
-  dropbox: { label: 'OAuth jetonu (opsiyonel)', ph: 'boş bırak → tarayıcı ile yetkilendir', auth: 'Tarayıcıda yetkilendir', cliFlag: 'client_id', oauth: true },
-  s3: { label: 'Erişim anahtarı', ph: 'AKIA…', auth: 'Bağlantıyı test et', cliFlag: 'access_key_id', oauth: false },
-  b2: { label: 'Hesap kimliği', ph: '0012ab…', auth: 'Bağlantıyı test et', cliFlag: 'account', oauth: false },
-  sftp: { label: 'Sunucu', ph: 'kullanici@host:22', auth: 'Bağlantıyı test et', cliFlag: 'host', oauth: false },
-  webdav: { label: 'URL', ph: 'https://dav.ornek.com/remote.php', auth: 'Bağlantıyı test et', cliFlag: 'url', oauth: false },
+type ProviderField = { key: string; label: string; ph?: string; secret?: boolean; optional?: boolean }
+type ProviderConfig = { oauth: boolean; fields: ProviderField[] }
+
+// rclone config keys per backend. The wizard renders these and passes them to
+// `rclone config create`; OAuth backends authorize in the browser instead.
+const PROVIDER_FIELDS: Record<ProviderId, ProviderConfig> = {
+  drive: {
+    oauth: true,
+    fields: [
+      { key: 'client_id', label: 'OAuth Client ID', ph: 'boş → rclone’un kendi istemcisi', optional: true },
+      { key: 'client_secret', label: 'OAuth Client Secret', secret: true, optional: true },
+    ],
+  },
+  dropbox: {
+    oauth: true,
+    fields: [
+      { key: 'client_id', label: 'App key', optional: true },
+      { key: 'client_secret', label: 'App secret', secret: true, optional: true },
+    ],
+  },
+  s3: {
+    oauth: false,
+    fields: [
+      { key: 'provider', label: 'Sağlayıcı', ph: 'AWS, Wasabi, MinIO…' },
+      { key: 'access_key_id', label: 'Access Key ID', ph: 'AKIA…' },
+      { key: 'secret_access_key', label: 'Secret Access Key', secret: true },
+      { key: 'region', label: 'Bölge', ph: 'us-east-1', optional: true },
+      { key: 'endpoint', label: 'Endpoint', ph: 'S3-uyumlu servisler için', optional: true },
+    ],
+  },
+  b2: {
+    oauth: false,
+    fields: [
+      { key: 'account', label: 'Account ID / Key ID', ph: '0012ab…' },
+      { key: 'key', label: 'Application Key', secret: true },
+    ],
+  },
+  sftp: {
+    oauth: false,
+    fields: [
+      { key: 'host', label: 'Sunucu', ph: 'ornek.com' },
+      { key: 'user', label: 'Kullanıcı', ph: 'kullanici' },
+      { key: 'port', label: 'Port', ph: '22', optional: true },
+      { key: 'pass', label: 'Parola', secret: true, optional: true },
+      { key: 'key_file', label: 'SSH anahtar dosyası', ph: '~/.ssh/id_ed25519', optional: true },
+    ],
+  },
+  webdav: {
+    oauth: false,
+    fields: [
+      { key: 'url', label: 'URL', ph: 'https://dav.ornek.com/remote.php/dav/files/me/' },
+      { key: 'vendor', label: 'Sağlayıcı', ph: 'nextcloud, owncloud, other', optional: true },
+      { key: 'user', label: 'Kullanıcı', optional: true },
+      { key: 'pass', label: 'Parola', secret: true, optional: true },
+    ],
+  },
+  crypt: {
+    oauth: false,
+    fields: [
+      { key: 'remote', label: 'Şifrelenecek konum', ph: 'arsiv:gizli (mevcut remote:yol)' },
+      { key: 'password', label: 'Parola', secret: true },
+      { key: 'password2', label: 'Tuz (salt)', secret: true, optional: true },
+    ],
+  },
 }
 
 /* ============================================================ inline icons (match the design) */
@@ -348,6 +457,7 @@ const ShieldIcon = () => <Glyph size={18} sw={1.8}><path d="M12 2 4 5v6c0 5 3.5 
 const InterfaceIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><path d="M3.5 9h17M3.5 15h17" /><path d="M12 3a13 13 0 0 1 0 18 13 13 0 0 1 0-18z" /></Glyph>
 const ServerIcon = (p: { size?: number }) => <Glyph size={p.size ?? 16}><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Glyph>
 const InfoIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></Glyph>
+const TrashIcon = () => <Glyph size={15}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></Glyph>
 
 const ProviderGlyph = ({ id, size = 18 }: { id: string; size?: number }) => {
   switch (id) {
@@ -363,6 +473,8 @@ const ProviderGlyph = ({ id, size = 18 }: { id: string; size?: number }) => {
       return <Glyph size={size} sw={1.6}><rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="m7 9 3 3-3 3M13 15h4" /></Glyph>
     case 'webdav':
       return <Glyph size={size} sw={1.6}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" /></Glyph>
+    case 'crypt':
+      return <Glyph size={size} sw={1.6}><rect x="4.5" y="11" width="15" height="9" rx="1.5" /><path d="M8 11V7.5a4 4 0 0 1 8 0V11" /><circle cx="12" cy="15.5" r="1.2" /></Glyph>
     default:
       return <ServerIcon size={size} />
   }
@@ -387,14 +499,6 @@ const newProfile = (): SyncProfile => ({
   extraArgs: '',
 })
 
-function remoteOf(destination: string, remotes: string[]): string {
-  return remotes.find((r) => destination.startsWith(r)) || ''
-}
-
-function clientLabel(name: string): string {
-  return name.replace(/:$/, '')
-}
-
 const EQ_BARS = Array.from({ length: 22 }, (_, i) => ({
   base: (0.25 + ((i * 37) % 70) / 100).toFixed(2),
   accent: i % 3 === 0,
@@ -416,12 +520,17 @@ function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'interface' | 'clients' | 'about'>('interface')
+  const [clientTests, setClientTests] = useState<Record<string, { state: 'idle' | 'busy' | 'ok' | 'fail'; msg?: string }>>({})
+  const [clientAbout, setClientAbout] = useState<Record<string, AboutInfo>>({})
 
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizStep, setWizStep] = useState(1)
   const [wizType, setWizType] = useState<ProviderId | null>(null)
   const [wizName, setWizName] = useState('')
-  const [wizCred, setWizCred] = useState('')
+  const [wizFields, setWizFields] = useState<Record<string, string>>({})
+  const [wizToken, setWizToken] = useState('')
+  const [wizAuthBusy, setWizAuthBusy] = useState(false)
+  const [wizTest, setWizTest] = useState<{ state: 'idle' | 'busy' | 'ok' | 'fail'; msg?: string }>({ state: 'idle' })
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerRemote, setPickerRemote] = useState('')
@@ -434,11 +543,23 @@ function App() {
   const accent = ACCENTS.find((a) => a.name === accentName)?.color || '#5fd6b6'
   const profiles = state?.profiles ?? []
   const remotes = state?.remotes ?? []
-  const clients: RemoteClient[] = state?.clients?.length ? state.clients : remotes.map((name) => ({ name, type: '' }))
+  const clients = useMemo<RemoteClient[]>(() => {
+    const r = state?.remotes ?? []
+    return state?.clients?.length ? state.clients : r.map((name) => ({ name, type: '' }))
+  }, [state])
   const selectedRun = selectedId && state ? state.lastRun[selectedId] : null
   const canSave = Boolean(draft.name.trim() && draft.source.trim() && draft.destination.trim())
   const running = busy === 'run' || Boolean(progress?.running)
   const activeRemote = remoteOf(draft.destination, remotes)
+
+  const modeCards = [
+    { id: 'sync' as SyncMode, title: t.mirror, cmd: 'sync', desc: t.mirrorDesc, tag: t.tagMirror },
+    { id: 'copy' as SyncMode, title: t.copyOnly, cmd: 'copy', desc: t.copyDesc, tag: t.tagCopy },
+    { id: 'move' as SyncMode, title: t.moveTitle, cmd: 'move', desc: t.moveDesc, tag: t.tagMove },
+    { id: 'bisync' as SyncMode, title: t.bisyncTitle, cmd: 'bisync', desc: t.bisyncDesc, tag: t.tagBisync },
+    { id: 'check' as SyncMode, title: t.checkTitle, cmd: 'check', desc: t.checkDesc, tag: t.tagCheck },
+  ]
+  const modeTag = (mode: SyncMode) => modeCards.find((m) => m.id === mode)?.tag ?? mode
 
   useEffect(() => {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
@@ -449,6 +570,21 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sd_lang', language)
   }, [language])
+
+  // fetch quota (rclone about) for each client when the Clients tab opens
+  useEffect(() => {
+    if (!settingsOpen || settingsTab !== 'clients') return
+    let cancelled = false
+    clients.forEach((c) => {
+      api
+        .aboutRemote(c.name)
+        .then((info) => !cancelled && setClientAbout((m) => ({ ...m, [c.name]: info })))
+        .catch(() => undefined)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [settingsOpen, settingsTab, clients])
 
   // live progress subscription
   useEffect(() => {
@@ -537,8 +673,11 @@ function App() {
       setDraft(first ?? newProfile())
     })
   const runOrStop = () => {
-    if (running) return // a blocking run cannot be cancelled via current IPC
     if (!selectedId) return
+    if (running) {
+      api.cancelSync(selectedId).catch(() => undefined)
+      return
+    }
     withBusy('run', async () => {
       setState(await api.runSync(selectedId))
     })
@@ -610,31 +749,75 @@ function App() {
     setWizStep(1)
     setWizType(null)
     setWizName('')
-    setWizCred('')
+    setWizFields({})
+    setWizToken('')
+    setWizTest({ state: 'idle' })
     setWizardOpen(true)
   }
-  const cred = wizType ? CRED_MAP[wizType] : null
+  const providerCfg = wizType ? PROVIDER_FIELDS[wizType] : null
   const wizNameFinal = wizName || (wizType ? PROVIDER_TYPES.find((p) => p.id === wizType)?.name ?? '' : '')
   const remoteSlug = wizNameFinal.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'yeni'
+  const setWizField = (key: string, value: string) => {
+    setWizFields((f) => ({ ...f, [key]: value }))
+    setWizTest({ state: 'idle' })
+  }
   const wizCli = useMemo(() => {
-    if (!wizType || !cred) return '$ syncdeck engine · hazır'
-    const extra = wizCred ? `  \\\n    --${cred.cliFlag} "${wizCred}"` : ''
-    return `config create "${remoteSlug}" ${wizType}${extra}`
-  }, [wizType, cred, wizCred, remoteSlug])
+    if (!wizType || !providerCfg) return '$ syncdeck engine · hazır'
+    const entered = providerCfg.fields
+      .filter((f) => (wizFields[f.key] || '').trim())
+      .map((f) => `  \\\n    ${f.key} ${f.secret ? '••••••' : `"${wizFields[f.key]}"`}`)
+      .join('')
+    const tokenLine = wizToken ? '  \\\n    token "<oauth>"  config_is_local false' : ''
+    return `config create "${remoteSlug}" ${wizType}${entered}${tokenLine}`
+  }, [wizType, providerCfg, wizFields, wizToken, remoteSlug])
+
+  // Whether step 2 is satisfied: OAuth needs a captured token; key providers
+  // need every non-optional field filled.
+  const wizReady = !providerCfg
+    ? false
+    : providerCfg.oauth
+      ? Boolean(wizToken)
+      : providerCfg.fields.filter((f) => !f.optional).every((f) => (wizFields[f.key] || '').trim())
+
+  function authorizeWizard() {
+    if (!wizType) return
+    setWizAuthBusy(true)
+    setWizTest({ state: 'busy' })
+    api
+      .authorizeRemote({ type: wizType, clientId: wizFields.client_id, clientSecret: wizFields.client_secret })
+      .then((token) => {
+        setWizToken(token)
+        setWizTest({ state: 'ok' })
+      })
+      .catch((err) => setWizTest({ state: 'fail', msg: err instanceof Error ? err.message : String(err) }))
+      .finally(() => setWizAuthBusy(false))
+  }
+
+  function testWizard() {
+    if (!wizType) return
+    setWizTest({ state: 'busy' })
+    api
+      .testRemote(buildConnString(wizType, wizFields))
+      .then((res) => setWizTest(res.ok ? { state: 'ok' } : { state: 'fail', msg: res.message }))
+      .catch((err) => setWizTest({ state: 'fail', msg: err instanceof Error ? err.message : String(err) }))
+  }
 
   function wizNext() {
     if (wizStep === 1 && !wizType) return
+    if (wizStep === 2 && !wizReady) return
     if (wizStep < 3) {
       setWizStep((s) => s + 1)
       return
     }
-    if (!wizType || !cred) return
+    if (!wizType || !providerCfg) return
     withBusy('wizard', async () => {
-      const options = !cred.oauth && wizCred ? [{ key: cred.cliFlag, value: wizCred }] : []
+      const options = providerCfg.fields
+        .filter((f) => (wizFields[f.key] || '').trim())
+        .map((f) => ({ key: f.key, value: wizFields[f.key].trim() }))
       const remote: RemoteDraft = {
         name: remoteSlug,
         type: wizType,
-        clientId: cred.oauth ? wizCred : '',
+        token: wizToken || '',
         options,
       }
       setState(await api.createRemote(remote))
@@ -648,6 +831,25 @@ function App() {
   }
   const addClient = () => openSettings('clients')
   const openExternal = (url: string) => api.openExternal(url)
+
+  const testClient = (name: string) => {
+    setClientTests((m) => ({ ...m, [name]: { state: 'busy' } }))
+    api
+      .testRemote(name)
+      .then((res) => setClientTests((m) => ({ ...m, [name]: res.ok ? { state: 'ok' } : { state: 'fail', msg: res.message } })))
+      .catch((err) => setClientTests((m) => ({ ...m, [name]: { state: 'fail', msg: err instanceof Error ? err.message : String(err) } })))
+  }
+  const deleteClient = (name: string) => {
+    if (!window.confirm(t.deleteClientConfirm(clientLabel(name)))) return
+    withBusy(`client:${name}`, async () => {
+      setState(await api.deleteRemote(name))
+      setClientTests((m) => {
+        const next = { ...m }
+        delete next[name]
+        return next
+      })
+    })
+  }
 
   /* ---- engine unavailable guard ---- */
   if (state && !state.rclonePath) {
@@ -699,7 +901,7 @@ function App() {
                       <span className="sd-prof__name">{p.name}</span>
                       <span className="sd-prof__remote">{p.destination || t.noFolder}</span>
                     </span>
-                    <span className="sd-prof__tag">{p.mode === 'sync' ? 'Ayna' : 'Kopya'}</span>
+                    <span className="sd-prof__tag">{modeTag(p.mode)}</span>
                   </button>
                 )
               })}
@@ -732,7 +934,7 @@ function App() {
                   <h1 className="sd-editor-title">{draft.name || t.newProfileTitle}</h1>
                 </div>
                 <div className="sd-editor-actions">
-                  <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={!selectedId || busy === 'run'} onClick={runOrStop}>{running ? t.stop : t.run}</button>
+                  <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={!selectedId} onClick={runOrStop}>{running ? t.stop : t.run}</button>
                   <button className="sl-btn sl-btn--sm" disabled={!canSave || busy === 'save'} onClick={saveProfile}>{t.save}</button>
                 </div>
               </div>
@@ -777,16 +979,16 @@ function App() {
               <div className="sd-panel">
                 <div className="sd-panel__label">{t.syncMode}</div>
                 <div className="sd-modes">
-                  {(['sync', 'copy'] as SyncMode[]).map((m) => {
-                    const on = draft.mode === m
+                  {modeCards.map((m) => {
+                    const on = draft.mode === m.id
                     return (
-                      <button key={m} className={`sd-mode${on ? ' is-active' : ''}`} onClick={() => setMode(m)}>
+                      <button key={m.id} className={`sd-mode${on ? ' is-active' : ''}`} onClick={() => setMode(m.id)}>
                         <span className="sd-mode__top">
                           <span className={`sd-radio${on ? ' is-on' : ''}`}><span /></span>
-                          <span className="sd-mode__title">{m === 'sync' ? t.mirror : t.copyOnly}</span>
-                          <code className="sd-mode__cmd">{m === 'sync' ? 'sync' : 'copy'}</code>
+                          <span className="sd-mode__title">{m.title}</span>
+                          <code className="sd-mode__cmd">{m.cmd}</code>
                         </span>
-                        <span className="sd-mode__desc">{m === 'sync' ? t.mirrorDesc : t.copyDesc}</span>
+                        <span className="sd-mode__desc">{m.desc}</span>
                       </button>
                     )
                   })}
@@ -898,16 +1100,37 @@ function App() {
                         <div className="sd-empty">{t.noClients}</div>
                       ) : (
                         <div className="sd-clientlist">
-                          {clients.map((c) => (
-                            <div key={c.name} className="sd-clientrow">
-                              <span className="sd-clientrow__icon"><ProviderGlyph id={c.type} size={22} /></span>
-                              <div className="sd-clientrow__text">
-                                <div className="sd-clientrow__name">{clientLabel(c.name)}</div>
-                                <div className="sd-clientrow__type">{c.type || '—'} · {c.name}</div>
+                          {clients.map((c) => {
+                            const test = clientTests[c.name]
+                            const about = clientAbout[c.name]
+                            const statusState = test && test.state !== 'idle' ? test.state : 'connected'
+                            const statusLabel =
+                              statusState === 'busy' ? t.wizTesting
+                                : statusState === 'ok' ? t.wizTestOk
+                                  : statusState === 'fail' ? t.wizTestFail
+                                    : t.connected
+                            return (
+                              <div key={c.name} className="sd-clientrow">
+                                <span className="sd-clientrow__icon"><ProviderGlyph id={c.type} size={22} /></span>
+                                <div className="sd-clientrow__text">
+                                  <div className="sd-clientrow__name">{clientLabel(c.name)}</div>
+                                  <div className="sd-clientrow__type">{c.type || '—'} · {c.name}</div>
+                                  {about?.supported && about.free && (
+                                    <div className="sd-clientrow__quota">{about.free} {t.quotaFree}{about.total ? ` / ${about.total}` : ''}</div>
+                                  )}
+                                </div>
+                                <span className={`sd-clientrow__status is-${statusState}`} title={test?.msg}>
+                                  <span className="sd-dot" />{statusLabel}
+                                </span>
+                                <div className="sd-clientrow__actions">
+                                  <button className="sd-rowbtn" disabled={test?.state === 'busy'} onClick={() => testClient(c.name)}>{t.testClient}</button>
+                                  <button className="sd-rowbtn sd-rowbtn--danger" disabled={busy === `client:${c.name}`} onClick={() => deleteClient(c.name)} aria-label={t.deleteClientLabel} title={t.deleteClientLabel}>
+                                    <TrashIcon />
+                                  </button>
+                                </div>
                               </div>
-                              <span className="sd-clientrow__status"><span className="sd-dot" />{t.connected}</span>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -963,18 +1186,47 @@ function App() {
                     </div>
                   </div>
                 )}
-                {wizStep === 2 && cred && (
+                {wizStep === 2 && providerCfg && (
                   <div className="sd-wiz__form">
                     <label className="sl-field">
                       <span className="sl-field__label">{t.wizClientName}</span>
                       <input className="sl-input" value={wizName} onChange={(e) => setWizName(e.target.value)} placeholder={t.wizClientNamePh} />
                     </label>
-                    <label className="sl-field">
-                      <span className="sl-field__label">{cred.label}</span>
-                      <input className="sl-input" value={wizCred} onChange={(e) => setWizCred(e.target.value)} placeholder={cred.ph} />
-                    </label>
-                    <div className="sd-wiz__note"><span className="sd-wiz__note-icon"><ShieldIcon /></span><span>{t.wizCredNote}</span></div>
-                    <button className="sl-btn sl-btn--ghost sl-btn--sm" style={{ alignSelf: 'flex-start' }}>{cred.auth}</button>
+                    {providerCfg.fields.map((f) => (
+                      <label key={f.key} className="sl-field">
+                        <span className="sl-field__label">{f.label}{f.optional ? ` · ${t.wizOptional}` : ''}</span>
+                        <input
+                          className="sl-input"
+                          type={f.secret ? 'password' : 'text'}
+                          value={wizFields[f.key] || ''}
+                          onChange={(e) => setWizField(f.key, e.target.value)}
+                          placeholder={f.ph}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                      </label>
+                    ))}
+                    <div className="sd-wiz__note"><span className="sd-wiz__note-icon"><ShieldIcon /></span><span>{providerCfg.oauth ? t.wizOauthNote : t.wizCredNote}</span></div>
+                    <div className="sd-wiz__auth">
+                      {providerCfg.oauth ? (
+                        <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={wizAuthBusy} onClick={authorizeWizard}>
+                          {wizAuthBusy ? t.wizAuthorizing : wizToken ? t.wizReauthorize : t.wizAuthorize}
+                        </button>
+                      ) : (
+                        <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={wizTest.state === 'busy' || !wizReady} onClick={testWizard}>
+                          {wizTest.state === 'busy' ? t.wizTesting : t.wizTest}
+                        </button>
+                      )}
+                      {wizTest.state !== 'idle' && (
+                        <span className={`sd-wiz__status is-${wizTest.state}`} title={wizTest.msg}>
+                          {wizTest.state === 'busy'
+                            ? providerCfg.oauth ? t.wizAuthorizing : t.wizTesting
+                            : wizTest.state === 'ok'
+                              ? providerCfg.oauth ? t.wizAuthorized : t.wizTestOk
+                              : `${t.wizTestFail}${wizTest.msg ? ` · ${wizTest.msg}` : ''}`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 {wizStep === 3 && (
@@ -984,6 +1236,7 @@ function App() {
                       { k: t.wizName, v: wizNameFinal },
                       { k: t.wizType, v: PROVIDER_TYPES.find((p) => p.id === wizType)?.name ?? '' },
                       { k: t.wizRemote, v: `${remoteSlug}:` },
+                      ...(providerCfg?.oauth && wizToken ? [{ k: 'OAuth', v: t.wizAuthorized }] : []),
                     ].map((r) => (
                       <div key={r.k} className="sd-wiz__rev"><span>{r.k}</span><strong>{r.v}</strong></div>
                     ))}
@@ -995,7 +1248,7 @@ function App() {
                 <pre className="sd-wiz__cli-pre">{wizCli}</pre>
                 <div className="sd-wiz__nav">
                   <button className="sl-btn sl-btn--quiet sl-btn--sm" style={{ visibility: wizStep > 1 ? 'visible' : 'hidden' }} onClick={() => setWizStep((s) => Math.max(1, s - 1))}>{t.back}</button>
-                  <button className="sl-btn sl-btn--sm" disabled={(wizStep === 1 && !wizType) || busy === 'wizard'} onClick={wizNext}>{wizStep === 3 ? t.create : t.next}</button>
+                  <button className="sl-btn sl-btn--sm" disabled={(wizStep === 1 && !wizType) || (wizStep === 2 && !wizReady) || busy === 'wizard'} onClick={wizNext}>{wizStep === 3 ? t.create : t.next}</button>
                 </div>
               </div>
             </div>
@@ -1060,6 +1313,12 @@ function App() {
 /* ============================================================ status bar */
 function StatusBar({ t, accent, running, progress }: { t: Copy; accent: string; running: boolean; progress: SyncProgress | null }) {
   const pct = progress?.pct ?? 0
+  const filesText =
+    running && progress && progress.files != null
+      ? progress.totalFiles
+        ? `${progress.files} / ${progress.totalFiles}`
+        : String(progress.files)
+      : '—'
   return (
     <footer className="sd-status">
       <div className="sd-status__seg">
@@ -1076,13 +1335,13 @@ function StatusBar({ t, accent, running, progress }: { t: Copy; accent: string; 
       </div>
       <div className="sd-status__progress">
         <div className="sd-status__bar-row">
-          <span>{running ? `${progress?.transferred ?? '0'} / ${progress?.total ?? '—'}` : '—'}</span>
+          <span>{running ? `${progress?.transferred || '0'} / ${progress?.total || '—'}` : '—'}</span>
           <span className="muted">{running ? `${pct}%` : ''}</span>
         </div>
         <div className="sd-status__track"><div className="sd-status__fill" style={{ width: `${running ? pct : 0}%` }} /></div>
       </div>
       <div className="sd-status__stats">
-        <div className="sd-status__stat"><div className="sd-status__cap">{t.files}</div><div className="sd-status__val">—</div></div>
+        <div className="sd-status__stat"><div className="sd-status__cap">{t.files}</div><div className="sd-status__val">{filesText}</div></div>
         <div className="sd-status__stat"><div className="sd-status__cap">{t.eta}</div><div className="sd-status__val">{running ? progress?.eta || '—' : '—'}</div></div>
       </div>
     </footer>
@@ -1097,19 +1356,6 @@ function Overlay({ children, onClose, label }: { children: ReactNode; onClose: (
       {children}
     </div>
   )
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 0) return ''
-  if (bytes < 1024) return `${bytes} B`
-  const units = ['KB', 'MB', 'GB', 'TB']
-  let value = bytes / 1024
-  let i = 0
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024
-    i++
-  }
-  return `${value.toFixed(1)} ${units[i]}`
 }
 
 export default App

@@ -172,8 +172,8 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-clientchip__plus { font-size: 1rem; line-height: 1; }
 .sd-clientchip__addlabel { font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; }
 
-.sd-modes { display: flex; gap: 8px; }
-.sd-mode { appearance: none; cursor: pointer; flex: 1; text-align: left; padding: 13px 15px; border: 1px solid var(--line-soft); background: transparent; border-radius: var(--r-sharp); transition: border-color .18s, background .18s; }
+.sd-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 8px; }
+.sd-mode { appearance: none; cursor: pointer; text-align: left; padding: 13px 15px; border: 1px solid var(--line-soft); background: transparent; border-radius: var(--r-sharp); transition: border-color .18s, background .18s; }
 .sd-mode.is-active { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 8%, transparent); }
 .sd-mode__top { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
 .sd-radio { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink-faint); display: inline-flex; align-items: center; justify-content: center; flex: none; }
@@ -261,6 +261,7 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-clientrow__text { flex: 1 1 auto; min-width: 0; }
 .sd-clientrow__name { font-size: .88rem; font-weight: 600; color: var(--ink); }
 .sd-clientrow__type { font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .08em; color: var(--ink-faint); }
+.sd-clientrow__quota { font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .04em; color: var(--accent-dim); margin-top: 3px; }
 .sd-clientrow__status { display: flex; align-items: center; gap: 6px; font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
 .sd-clientrow__status .sd-dot { width: 6px; height: 6px; }
 .sd-empty { padding: 28px 16px; text-align: center; font-size: .84rem; color: var(--ink-faint); border: 1px dashed var(--line-soft); border-radius: var(--r-sharp); }
@@ -324,6 +325,29 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-engine-ico { width: 60px; height: 60px; margin: 0 auto 22px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-sharp); color: var(--accent); }
 .sd-engine-card h1 { font-family: var(--ff-display); font-style: italic; font-stretch: 116%; font-weight: 800; text-transform: uppercase; font-size: 1.6rem; color: var(--ink); margin: 0 0 12px; }
 .sd-engine-card p { font-size: .9rem; line-height: 1.6; color: var(--ink-dim); margin: 0 0 24px; }
+
+/* ---- wizard auth / connection test ---- */
+.sd-wiz__auth { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sd-wiz__status { font-family: var(--ff-mono); font-size: .66rem; letter-spacing: .04em; color: var(--ink-faint); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sd-wiz__status.is-busy { color: var(--ink-dim); }
+.sd-wiz__status.is-ok { color: var(--accent); }
+.sd-wiz__status.is-fail { color: oklch(0.72 0.16 25); }
+
+/* ---- client row actions + live test status ---- */
+.sd-clientrow__status.is-busy { color: var(--ink-dim); }
+.sd-clientrow__status.is-busy .sd-dot { background: var(--ink-dim); }
+.sd-clientrow__status.is-fail { color: oklch(0.72 0.16 25); }
+.sd-clientrow__status.is-fail .sd-dot { background: oklch(0.7 0.16 25); }
+.sd-clientrow__actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.sd-rowbtn {
+  appearance: none; cursor: pointer; background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-sharp);
+  color: var(--ink-dim); font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .1em; text-transform: uppercase;
+  padding: .5rem .7rem; display: inline-flex; align-items: center; justify-content: center; transition: color .18s, border-color .18s;
+}
+.sd-rowbtn:hover:not(:disabled) { color: var(--accent); border-color: var(--line); }
+.sd-rowbtn:disabled { opacity: .4; pointer-events: none; }
+.sd-rowbtn--danger { padding: .5rem .55rem; }
+.sd-rowbtn--danger:hover:not(:disabled) { color: oklch(0.72 0.16 25); border-color: oklch(0.6 0.16 25 / 0.5); }
 
 @media (prefers-reduced-motion: reduce) {
   .sd-dot--pulse, .sd-eq span { animation: none !important; }

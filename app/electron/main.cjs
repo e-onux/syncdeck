@@ -3,10 +3,20 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
+const {
+  splitArgs,
+  normalizeMode,
+  supportsEmptyDirs,
+  progressFromStats,
+  parseStats,
+} = require('./lib/engine.cjs');
 
 const APP_ID = 'com.emironuk.syncdeck';
 const APP_NAME = 'SyncDeck';
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+
+// Keep the dock / menu-bar / userData name consistent with the packaged build.
+app.setName(APP_NAME);
 const configPath = () => path.join(app.getPath('userData'), 'profiles.json');
 const launchAgentPath = () => path.join(os.homedir(), 'Library', 'LaunchAgents', `${APP_ID}.plist`);
 
@@ -15,6 +25,7 @@ function defaultConfig() {
     launchAtLogin: false,
     profiles: [],
     lastRun: {},
+    bisyncReady: {},
   };
 }
 
@@ -44,21 +55,6 @@ async function appState() {
   };
 }
 
-// Parse an rclone --stats-one-line line into a live progress object.
-function parseStats(line) {
-  const m = line.match(
-    /Transferred:\s*([\d.]+\s*\w+)\s*\/\s*([\d.]+\s*\w+),\s*(\d+)%(?:,\s*([\d.]+\s*\w+\/s))?(?:,\s*ETA\s*(\S+))?/i,
-  );
-  if (!m) return null;
-  return {
-    transferred: m[1].replace(/\s+/g, ' ').trim(),
-    total: m[2].replace(/\s+/g, ' ').trim(),
-    pct: Number(m[3]),
-    speed: m[4] ? m[4].replace(/\s+/g, ' ').trim() : '',
-    eta: m[5] || '',
-  };
-}
-
 function findRclone() {
   const candidates = [
     process.env.RCLONE_PATH,
@@ -84,66 +80,109 @@ function normalizeProfile(profile) {
     name: String(profile.name || 'Yeni Senkron').trim(),
     source: String(profile.source || '').trim(),
     destination: String(profile.destination || '').trim(),
-    mode: profile.mode === 'copy' ? 'copy' : 'sync',
+    mode: normalizeMode(profile.mode),
     enabled: Boolean(profile.enabled),
     extraArgs: String(profile.extraArgs || '').trim(),
   };
 }
 
-function splitArgs(input) {
-  if (!input) return [];
-  return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((part) => part.replace(/^"|"$/g, '')) || [];
+// Live sync jobs keyed by profile id, so a run can be cancelled from the UI.
+const runningJobs = new Map();
+
+function killChild(child) {
+  if (!child || child.killed) return;
+  if (process.platform === 'win32') {
+    // SIGINT is unreliable on Windows; kill the whole process tree.
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F']);
+  } else {
+    // rclone handles SIGINT gracefully: it stops, prints a final summary, exits.
+    child.kill('SIGINT');
+  }
 }
 
-async function runRcloneProfile(profile, onProgress) {
+async function runRcloneProfile(profile, onProgress, jobControl) {
   const rclone = findRclone();
   if (!rclone) {
-    throw new Error('rclone bulunamadı. Homebrew ile `brew install rclone` kur veya RCLONE_PATH ayarla.');
+    throw new Error('Senkron motoru bulunamadı. SyncDeck’i yeniden kur veya motor dahil olacak şekilde tekrar derle.');
   }
   if (!profile.source || !profile.destination) {
     throw new Error('Kaynak ve hedef klasör zorunlu.');
   }
 
-  const command = profile.mode === 'copy' ? 'copy' : 'sync';
+  const command = normalizeMode(profile.mode);
   const args = [
     command,
     profile.source,
     profile.destination,
-    '--create-empty-src-dirs',
-    '--stats-one-line',
+    ...(supportsEmptyDirs(command) ? ['--create-empty-src-dirs'] : []),
+    '--use-json-log',
     '--stats=1s',
+    '-v',
     ...splitArgs(profile.extraArgs),
   ];
 
   return new Promise((resolve, reject) => {
     const child = spawn(rclone, args, { env: process.env });
-    let output = '';
+    if (jobControl) jobControl.child = child;
+
+    const logLines = [];
     let pending = '';
 
+    const pushLog = (text) => {
+      logLines.push(text);
+      // Keep the live log bounded — the renderer shows the tail.
+      if (logLines.length > 400) logLines.splice(0, logLines.length - 400);
+    };
+
+    const handleLine = (line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      let entry = null;
+      try {
+        entry = JSON.parse(trimmed);
+      } catch {
+        // Non-JSON line (e.g. a stray banner) — keep it verbatim.
+        pushLog(trimmed);
+        const fallback = parseStats(trimmed);
+        if (fallback && typeof onProgress === 'function') onProgress(fallback);
+        return;
+      }
+      if (entry.stats) {
+        const progress = progressFromStats(entry.stats);
+        if (progress && typeof onProgress === 'function') onProgress(progress);
+        return; // stats spam stays out of the readable log
+      }
+      if (entry.msg) {
+        const level = entry.level && entry.level !== 'info' ? `${entry.level}: ` : '';
+        const where = entry.object ? `${entry.object}: ` : '';
+        pushLog(`${level}${where}${entry.msg}`.trim());
+      }
+    };
+
     const consume = (chunk) => {
-      const text = chunk.toString();
-      output += text;
-      if (typeof onProgress !== 'function') return;
-      pending += text;
+      pending += chunk.toString();
       const lines = pending.split(/\r?\n/);
       pending = lines.pop() || '';
-      for (const line of lines) {
-        const stats = parseStats(line);
-        if (stats) onProgress(stats);
-      }
+      for (const line of lines) handleLine(line);
     };
 
     child.stdout.on('data', consume);
     child.stderr.on('data', consume);
     child.on('error', reject);
     child.on('close', (code) => {
+      if (pending.trim()) handleLine(pending);
+      const cancelled = Boolean(jobControl && jobControl.cancelled);
+      const body = logLines.join('\n').trim();
       const result = {
         code,
-        output: output.trim() || 'rclone çıktı üretmeden tamamlandı.',
+        cancelled,
+        output: cancelled
+          ? `${body}\n■ Çalışma durduruldu.`.trim()
+          : body || 'Motor çıktı üretmeden tamamlandı.',
         finishedAt: new Date().toISOString(),
       };
-      if (code === 0) resolve(result);
-      else reject(new Error(result.output || `rclone ${code} koduyla çıktı.`));
+      if (code === 0 || cancelled) resolve(result);
+      else reject(new Error(body || `Motor ${code} koduyla çıktı.`));
     });
   });
 }
@@ -233,12 +272,13 @@ async function listRemoteDir(remotePath) {
 function normalizeRemote(remote) {
   const name = String(remote.name || '').trim().replace(/[:\s]+/g, '-');
   const type = String(remote.type || '').trim();
-  if (!name || !type) throw new Error('Remote adı ve tipi zorunlu.');
+  if (!name || !type) throw new Error('İstemci adı ve türü zorunlu.');
   return {
     name,
     type,
     clientId: String(remote.clientId || '').trim(),
     clientSecret: String(remote.clientSecret || '').trim(),
+    token: String(remote.token || '').trim(),
     options: Array.isArray(remote.options)
       ? remote.options
           .map((option) => ({
@@ -253,7 +293,7 @@ function normalizeRemote(remote) {
 
 async function createRemote(remoteInput) {
   const rclone = findRclone();
-  if (!rclone) throw new Error('rclone bulunamadı.');
+  if (!rclone) throw new Error('Senkron motoru bulunamadı.');
   const remote = normalizeRemote(remoteInput);
   const args = ['config', 'create', remote.name, remote.type];
 
@@ -262,7 +302,11 @@ async function createRemote(remoteInput) {
   for (const option of remote.options) {
     args.push(option.key, option.value);
   }
+  // An OAuth token captured by the wizard — store it and skip the local browser flow.
+  if (remote.token) args.push('token', remote.token, 'config_is_local', 'false');
   args.push(...splitArgs(remote.extraArgs));
+  // Store any password-type fields obscured (rclone's expected format).
+  args.push('--obscure', '--non-interactive');
 
   return new Promise((resolve, reject) => {
     const child = spawn(rclone, args, { env: process.env });
@@ -276,7 +320,125 @@ async function createRemote(remoteInput) {
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) resolve(output.trim());
-      else reject(new Error(output.trim() || `rclone config create ${code} koduyla çıktı.`));
+      else reject(new Error(output.trim() || `İstemci oluşturulamadı (kod ${code}).`));
+    });
+  });
+}
+
+// Run rclone's own OAuth helper: it opens the browser, runs a localhost callback,
+// and prints the resulting token JSON between marker lines, which we capture.
+async function authorizeRemote(payload) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Senkron motoru bulunamadı.');
+  const type = String((payload && payload.type) || '').trim();
+  if (!type) throw new Error('Geçersiz istemci türü.');
+  const args = ['authorize', type];
+  const clientId = String((payload && payload.clientId) || '').trim();
+  const clientSecret = String((payload && payload.clientSecret) || '').trim();
+  if (clientId) args.push(clientId);
+  if (clientSecret) args.push(clientSecret);
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(rclone, args, { env: process.env });
+    runningJobs.set('__authorize__', { cancelled: false, child });
+    let buffer = '';
+    const collect = (chunk) => {
+      buffer += chunk.toString();
+    };
+    child.stdout.on('data', collect);
+    child.stderr.on('data', collect);
+    child.on('error', (error) => {
+      runningJobs.delete('__authorize__');
+      reject(error);
+    });
+    child.on('close', (code) => {
+      runningJobs.delete('__authorize__');
+      const match = buffer.match(/--->\s*([\s\S]*?)\s*<---/);
+      const token = match ? match[1].trim() : '';
+      if (token) resolve(token);
+      else reject(new Error(buffer.trim() || `Yetkilendirme tamamlanamadı (kod ${code}).`));
+    });
+  });
+}
+
+// Reachability check. Accepts a saved remote name (`work:`) or an on-the-fly
+// connection string (`:s3,access_key_id=…:`) so the wizard can test before save.
+async function testRemote(target) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Senkron motoru bulunamadı.');
+  let path = String(target || '').trim();
+  if (!path) throw new Error('Geçersiz istemci.');
+  if (!path.includes(':')) path = `${path}:`;
+
+  return new Promise((resolve) => {
+    const child = spawn(rclone, ['lsd', path, '--max-depth', '1', '--low-level-retries', '1'], { env: process.env });
+    let errOutput = '';
+    child.stderr.on('data', (chunk) => {
+      errOutput += chunk.toString();
+    });
+    child.on('error', () => resolve({ ok: false, message: 'Motor çalıştırılamadı.' }));
+    child.on('close', (code) => {
+      if (code === 0) resolve({ ok: true });
+      else resolve({ ok: false, message: errOutput.trim().split(/\r?\n/).pop() || `Bağlantı başarısız (kod ${code}).` });
+    });
+  });
+}
+
+async function deleteRemote(name) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Senkron motoru bulunamadı.');
+  const clean = String(name || '').trim().replace(/:$/, '');
+  if (!clean) throw new Error('Geçersiz istemci adı.');
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(rclone, ['config', 'delete', clean], { env: process.env });
+    let errOutput = '';
+    child.stderr.on('data', (chunk) => {
+      errOutput += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve(true);
+      else reject(new Error(errOutput.trim() || `İstemci silinemedi (kod ${code}).`));
+    });
+  });
+}
+
+// Quota / free space for a remote (`rclone about`). Not all backends support it.
+async function aboutRemote(name) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Senkron motoru bulunamadı.');
+  const clean = String(name || '').trim();
+  if (!clean) throw new Error('Geçersiz istemci.');
+  const target = clean.endsWith(':') ? clean : `${clean}:`;
+
+  return new Promise((resolve) => {
+    const child = spawn(rclone, ['about', target, '--json'], { env: process.env });
+    let output = '';
+    let errOutput = '';
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      errOutput += chunk.toString();
+    });
+    child.on('error', () => resolve({ supported: false }));
+    child.on('close', (code) => {
+      if (code !== 0) {
+        resolve({ supported: false, message: errOutput.trim().split(/\r?\n/).pop() || '' });
+        return;
+      }
+      try {
+        const info = JSON.parse(output || '{}');
+        resolve({
+          supported: true,
+          total: info.total != null ? humanBytes(info.total) : '',
+          used: info.used != null ? humanBytes(info.used) : '',
+          free: info.free != null ? humanBytes(info.free) : '',
+        });
+      } catch {
+        resolve({ supported: false });
+      }
     });
   });
 }
@@ -345,8 +507,11 @@ async function runStartupSyncs() {
 
   for (const profile of enabledProfiles) {
     try {
-      const result = await runRcloneProfile(profile);
+      const needsResync = profile.mode === 'bisync' && !(config.bisyncReady && config.bisyncReady[profile.id]);
+      const runProfile = needsResync ? { ...profile, extraArgs: `${profile.extraArgs} --resync`.trim() } : profile;
+      const result = await runRcloneProfile(runProfile);
       config.lastRun[profile.id] = { ok: true, ...result };
+      if (profile.mode === 'bisync') config.bisyncReady = { ...(config.bisyncReady || {}), [profile.id]: true };
     } catch (error) {
       config.lastRun[profile.id] = {
         ok: false,
@@ -406,6 +571,7 @@ ipcMain.handle('sync:run', async (event, id) => {
   const config = await readConfig();
   const profile = config.profiles.find((item) => item.id === id);
   if (!profile) throw new Error('Profil bulunamadı.');
+  if (runningJobs.has(id)) throw new Error('Bu profil zaten çalışıyor.');
   const emit = (payload) => {
     try {
       event.sender.send('sync:progress', { id, ...payload });
@@ -413,17 +579,36 @@ ipcMain.handle('sync:run', async (event, id) => {
       /* window may have closed */
     }
   };
+  const jobControl = { cancelled: false, child: null };
+  runningJobs.set(id, jobControl);
   emit({ running: true, pct: 0 });
+  // bisync needs a one-time --resync to establish its baseline on the first run.
+  const needsResync = profile.mode === 'bisync' && !(config.bisyncReady && config.bisyncReady[id]);
+  const runProfile = needsResync ? { ...profile, extraArgs: `${profile.extraArgs} --resync`.trim() } : profile;
   try {
-    const result = await runRcloneProfile(profile, (stats) => emit({ running: true, ...stats }));
-    config.lastRun[id] = { ok: true, ...result };
+    const result = await runRcloneProfile(runProfile, (stats) => emit({ running: true, ...stats }), jobControl);
+    config.lastRun[id] = { ok: result.code === 0, ...result };
+    if (profile.mode === 'bisync' && result.code === 0) {
+      config.bisyncReady = { ...(config.bisyncReady || {}), [id]: true };
+    }
     await writeConfig(config);
-    emit({ running: false, pct: 100 });
+    emit({ running: false, pct: result.cancelled ? undefined : 100 });
     return appState();
   } catch (error) {
     emit({ running: false });
     throw error;
+  } finally {
+    runningJobs.delete(id);
   }
+});
+
+ipcMain.handle('sync:cancel', async (_event, id) => {
+  const job = runningJobs.get(id);
+  if (job && job.child) {
+    job.cancelled = true;
+    killChild(job.child);
+  }
+  return true;
 });
 
 ipcMain.handle('remote:list', async (_event, remotePath) => listRemoteDir(remotePath));
@@ -443,6 +628,17 @@ ipcMain.handle('remote:create', async (_event, remote) => {
   return appState();
 });
 
+ipcMain.handle('remote:authorize', async (_event, payload) => authorizeRemote(payload || {}));
+
+ipcMain.handle('remote:test', async (_event, target) => testRemote(target));
+
+ipcMain.handle('remote:delete', async (_event, name) => {
+  await deleteRemote(name);
+  return appState();
+});
+
+ipcMain.handle('remote:about', async (_event, name) => aboutRemote(name));
+
 ipcMain.handle('about:open', async () => {
   dialog.showMessageBox({
     type: 'info',
@@ -453,7 +649,31 @@ ipcMain.handle('about:open', async () => {
   });
 });
 
-if (process.argv.includes('--run-startup-syncs')) {
+if (process.argv.includes('--self-test')) {
+  // Headless diagnostic: resolve the engine and list remotes, print, quit.
+  // Useful for confirming the bundled rclone is found ("engine not found" issues).
+  app.whenReady().then(async () => {
+    try {
+      const state = await appState();
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            enginePath: state.rclonePath,
+            platform: state.platform,
+            remoteCount: (state.remotes || []).length,
+            remotes: state.remotes,
+            clients: state.clients,
+          },
+          null,
+          2,
+        )}\n`,
+      );
+    } catch (error) {
+      process.stdout.write(`SELF-TEST ERROR: ${error.message}\n`);
+    }
+    app.quit();
+  });
+} else if (process.argv.includes('--run-startup-syncs')) {
   app.whenReady().then(async () => {
     await runStartupSyncs();
     app.quit();
