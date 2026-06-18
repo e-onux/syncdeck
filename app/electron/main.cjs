@@ -8,6 +8,7 @@ const {
   normalizeMode,
   supportsEmptyDirs,
   progressFromStats,
+  fileEventFromLogEntry,
   parseStats,
 } = require('./lib/engine.cjs');
 
@@ -44,14 +45,19 @@ async function writeConfig(config) {
 }
 
 async function appState() {
+  const rclonePath = findRclone();
+  const [remotesResult, clientsResult] = rclonePath
+    ? await Promise.allSettled([listRemotes(rclonePath), dumpRemotes(rclonePath)])
+    : [{ status: 'fulfilled', value: [] }, { status: 'fulfilled', value: [] }];
+
   return {
     ...(await readConfig()),
-    rclonePath: findRclone(),
+    rclonePath,
     configPath: configPath(),
     launchAgentPath: launchAgentPath(),
     platform: process.platform,
-    remotes: await listRemotes(),
-    clients: await dumpRemotes(),
+    remotes: remotesResult.status === 'fulfilled' ? remotesResult.value : [],
+    clients: clientsResult.status === 'fulfilled' ? clientsResult.value : [],
   };
 }
 
@@ -86,6 +92,56 @@ function normalizeProfile(profile) {
   };
 }
 
+function hasArg(args, name) {
+  return args.includes(name) || args.some((arg) => arg.startsWith(`${name}=`));
+}
+
+function hasCompareChecksum(args) {
+  const compareIndex = args.indexOf('--compare');
+  return (
+    args.includes('--checksum') ||
+    args.includes('--compare=checksum') ||
+    (compareIndex >= 0 && args[compareIndex + 1] === 'checksum')
+  );
+}
+
+function prepareExtraArgs(command, extraArgs) {
+  const args = splitArgs(extraArgs);
+
+  if (command === 'bisync' && hasArg(args, '--ignore-listing-checksum') && !hasCompareChecksum(args)) {
+    return args.filter((arg) => arg !== '--ignore-listing-checksum');
+  }
+
+  return args;
+}
+
+function withExtraArg(profile, arg) {
+  const args = splitArgs(profile.extraArgs);
+  if (!hasArg(args, arg)) args.push(arg);
+  return { ...profile, extraArgs: args.join(' ') };
+}
+
+function needsBisyncResync(error) {
+  const message = String(error && error.message ? error.message : error).replace(/\u001b\[[0-9;]*m/g, '');
+  return (
+    /Must run --resync to recover/i.test(message) ||
+    /cannot find prior Path1 or Path2 listings/i.test(message)
+  );
+}
+
+function looksRemotePath(value) {
+  const text = String(value || '');
+  return /^[^/\\\s][^:]*:/.test(text);
+}
+
+function transferDirection(profile) {
+  const sourceRemote = looksRemotePath(profile.source);
+  const destinationRemote = looksRemotePath(profile.destination);
+  if (sourceRemote && !destinationRemote) return 'download';
+  if (!sourceRemote && destinationRemote) return 'upload';
+  return 'unknown';
+}
+
 // Live sync jobs keyed by profile id, so a run can be cancelled from the UI.
 const runningJobs = new Map();
 
@@ -110,6 +166,8 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
   }
 
   const command = normalizeMode(profile.mode);
+  const extraArgs = prepareExtraArgs(command, profile.extraArgs);
+  const direction = transferDirection(profile);
   const args = [
     command,
     profile.source,
@@ -118,7 +176,7 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
     '--use-json-log',
     '--stats=1s',
     '-v',
-    ...splitArgs(profile.extraArgs),
+    ...extraArgs,
   ];
 
   return new Promise((resolve, reject) => {
@@ -148,7 +206,7 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
         return;
       }
       if (entry.stats) {
-        const progress = progressFromStats(entry.stats);
+        const progress = progressFromStats(entry.stats, direction);
         if (progress && typeof onProgress === 'function') onProgress(progress);
         return; // stats spam stays out of the readable log
       }
@@ -156,6 +214,8 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
         const level = entry.level && entry.level !== 'info' ? `${entry.level}: ` : '';
         const where = entry.object ? `${entry.object}: ` : '';
         pushLog(`${level}${where}${entry.msg}`.trim());
+        const fileEvent = fileEventFromLogEntry(entry, direction);
+        if (fileEvent && typeof onProgress === 'function') onProgress({ transferEvents: [fileEvent] });
       }
     };
 
@@ -187,49 +247,52 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
   });
 }
 
-async function listRemotes() {
+function captureRclone(args, { timeoutMs = 5000 } = {}) {
   const rclone = findRclone();
   if (!rclone) return [];
 
   return new Promise((resolve) => {
-    const child = spawn(rclone, ['listremotes']);
+    const child = spawn(rclone, args);
     let output = '';
     child.stdout.on('data', (chunk) => {
       output += chunk.toString();
     });
-    child.on('error', () => resolve([]));
-    child.on('close', () => {
-      resolve(output.split(/\r?\n/).map((item) => item.trim()).filter(Boolean));
-    });
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(output);
+    };
+    const timer = setTimeout(() => {
+      killChild(child);
+      finish();
+    }, timeoutMs);
+
+    child.on('error', finish);
+    child.on('close', finish);
   });
 }
 
-// Detailed remotes (name + type) via `rclone config dump`.
-async function dumpRemotes() {
-  const rclone = findRclone();
-  if (!rclone) return [];
+async function listRemotes(rclonePath = findRclone()) {
+  if (!rclonePath) return [];
+  const output = await captureRclone(['listremotes']);
+  return output.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
 
-  return new Promise((resolve) => {
-    const child = spawn(rclone, ['config', 'dump']);
-    let output = '';
-    child.stdout.on('data', (chunk) => {
-      output += chunk.toString();
-    });
-    child.on('error', () => resolve([]));
-    child.on('close', () => {
-      try {
-        const parsed = JSON.parse(output || '{}');
-        resolve(
-          Object.entries(parsed).map(([name, value]) => ({
-            name: `${name}:`,
-            type: (value && value.type) || '',
-          })),
-        );
-      } catch {
-        resolve([]);
-      }
-    });
-  });
+// Detailed remotes (name + type) via `rclone config dump`.
+async function dumpRemotes(rclonePath = findRclone()) {
+  if (!rclonePath) return [];
+  const output = await captureRclone(['config', 'dump']);
+  try {
+    const parsed = JSON.parse(output || '{}');
+    return Object.entries(parsed).map(([name, value]) => ({
+      name: `${name}:`,
+      type: (value && value.type) || '',
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // List one remote folder via `rclone lsjson remote:path`.
@@ -508,8 +571,14 @@ async function runStartupSyncs() {
   for (const profile of enabledProfiles) {
     try {
       const needsResync = profile.mode === 'bisync' && !(config.bisyncReady && config.bisyncReady[profile.id]);
-      const runProfile = needsResync ? { ...profile, extraArgs: `${profile.extraArgs} --resync`.trim() } : profile;
-      const result = await runRcloneProfile(runProfile);
+      const runProfile = needsResync ? withExtraArg(profile, '--resync') : profile;
+      let result;
+      try {
+        result = await runRcloneProfile(runProfile);
+      } catch (error) {
+        if (profile.mode !== 'bisync' || needsResync || !needsBisyncResync(error)) throw error;
+        result = await runRcloneProfile(withExtraArg(profile, '--resync'));
+      }
       config.lastRun[profile.id] = { ok: true, ...result };
       if (profile.mode === 'bisync') config.bisyncReady = { ...(config.bisyncReady || {}), [profile.id]: true };
     } catch (error) {
@@ -584,9 +653,16 @@ ipcMain.handle('sync:run', async (event, id) => {
   emit({ running: true, pct: 0 });
   // bisync needs a one-time --resync to establish its baseline on the first run.
   const needsResync = profile.mode === 'bisync' && !(config.bisyncReady && config.bisyncReady[id]);
-  const runProfile = needsResync ? { ...profile, extraArgs: `${profile.extraArgs} --resync`.trim() } : profile;
+  const runProfile = needsResync ? withExtraArg(profile, '--resync') : profile;
   try {
-    const result = await runRcloneProfile(runProfile, (stats) => emit({ running: true, ...stats }), jobControl);
+    let result;
+    try {
+      result = await runRcloneProfile(runProfile, (stats) => emit({ running: true, ...stats }), jobControl);
+    } catch (error) {
+      if (profile.mode !== 'bisync' || needsResync || !needsBisyncResync(error)) throw error;
+      emit({ running: true, pct: 0 });
+      result = await runRcloneProfile(withExtraArg(profile, '--resync'), (stats) => emit({ running: true, ...stats }), jobControl);
+    }
     config.lastRun[id] = { ok: result.code === 0, ...result };
     if (profile.mode === 'bisync' && result.code === 0) {
       config.bisyncReady = { ...(config.bisyncReady || {}), [id]: true };

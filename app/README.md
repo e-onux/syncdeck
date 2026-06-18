@@ -8,9 +8,9 @@ Important attribution: `rclone` is an independent open-source project maintained
 
 Download the build for your OS from [Releases](https://github.com/e-onux/syncdeck/releases). rclone ships inside the app — no separate install.
 
-Because the app is distributed **unsigned** (free, no Apple Developer account), each OS shows a one-time prompt:
+Because the app is distributed **unsigned** (free, no Apple Developer account), each OS shows a one-time prompt. macOS builds are ad-hoc signed so the bundle is internally valid, but they are not Apple-notarized:
 
-- **macOS** — if you see *"SyncDeck is damaged and can't be opened"* (German: *"ist beschädigt"*), the file is **not** corrupt — it is only Gatekeeper quarantine on an unsigned app. Drag the app to `Applications`, then run once:
+- **macOS** — if you see *"SyncDeck is damaged and can't be opened"* (German: *"ist beschädigt"*), the file is usually **not** corrupt — it is Gatekeeper quarantine on an unsigned, unnotarized app. Drag the app to `Applications`, then run once:
   ```bash
   xattr -dr com.apple.quarantine /Applications/SyncDeck.app
   ```

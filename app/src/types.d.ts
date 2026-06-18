@@ -83,6 +83,15 @@ export type SyncProgress = {
   files?: number;
   totalFiles?: number;
   errors?: number;
+  transferEvents?: TransferEvent[];
+};
+
+export type TransferEvent = {
+  id: string;
+  name: string;
+  direction: 'upload' | 'download' | 'unknown';
+  pct: number;
+  status: 'active' | 'done' | 'deleted' | 'error';
 };
 
 declare global {

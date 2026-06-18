@@ -53,10 +53,31 @@ function humanEta(seconds) {
 
 // Turn a parsed `--use-json-log` stats object into the live progress payload the
 // renderer status bar consumes (bytes, %, speed, ETA, and file counts).
-function progressFromStats(stats) {
+function progressFromStats(stats, direction = 'unknown') {
   if (!stats || typeof stats !== 'object') return null;
   const bytes = Number(stats.bytes) || 0;
   const totalBytes = Number(stats.totalBytes) || 0;
+  const transferEvents = [];
+  const activeTransfers = Array.isArray(stats.transferring) ? stats.transferring : [];
+  for (const item of activeTransfers) {
+    const name = String(item.name || item.Name || item.path || item.Path || '').trim();
+    if (!name) continue;
+    const size = Number(item.size ?? item.Size ?? item.totalBytes ?? 0) || 0;
+    const itemBytes = Number(item.bytes ?? item.Bytes ?? 0) || 0;
+    const pct =
+      Number.isFinite(Number(item.percentage))
+        ? Math.max(0, Math.min(100, Math.round(Number(item.percentage))))
+        : size > 0
+          ? Math.max(0, Math.min(100, Math.round((itemBytes / size) * 100)))
+          : 0;
+    transferEvents.push({
+      id: `${direction}:${name}`,
+      name,
+      direction,
+      pct,
+      status: 'active',
+    });
+  }
   const pct = totalBytes > 0 ? Math.min(100, Math.round((bytes / totalBytes) * 100)) : 0;
   return {
     transferred: humanBytes(bytes),
@@ -67,7 +88,26 @@ function progressFromStats(stats) {
     files: Number(stats.transfers) || 0,
     totalFiles: Number(stats.totalTransfers) || 0,
     errors: Number(stats.errors) || 0,
+    transferEvents,
   };
+}
+
+function fileEventFromLogEntry(entry, direction = 'unknown') {
+  if (!entry || typeof entry !== 'object') return null;
+  const name = String(entry.object || entry.name || '').trim();
+  const msg = String(entry.msg || '');
+  if (!name) return null;
+
+  if (/Copied|Moved|Renamed|Transferred|Server Side Cop/i.test(msg)) {
+    return { id: `${direction}:${name}`, name, direction, pct: 100, status: 'done' };
+  }
+  if (/Deleted|Removing/i.test(msg)) {
+    return { id: `delete:${name}`, name, direction: 'unknown', pct: 100, status: 'deleted' };
+  }
+  if (/error|failed/i.test(msg) || entry.level === 'error') {
+    return { id: `error:${name}`, name, direction, pct: 100, status: 'error' };
+  }
+  return null;
 }
 
 // Fallback parser for a textual rclone `--stats-one-line` progress line.
@@ -94,5 +134,6 @@ module.exports = {
   humanRate,
   humanEta,
   progressFromStats,
+  fileEventFromLogEntry,
   parseStats,
 };
