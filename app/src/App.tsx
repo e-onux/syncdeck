@@ -10,6 +10,7 @@ import type {
   SyncMode,
   SyncProfile,
   SyncProgress,
+  TransferEvent,
 } from './types'
 import {
   OPTION_FLAGS,
@@ -178,6 +179,10 @@ const tr = {
   eta: 'ETA',
   langTitle: 'Dil',
   accentTitle: 'Vurgu rengi',
+  themeTitle: 'Tema',
+  themeDark: 'Koyu',
+  themeLight: 'Açık',
+  profileName: 'Profil adı',
   systemTitle: 'Sistem',
   launchAtLogin: 'Açılışta SyncDeck’i başlat',
   launchAtLoginHint: 'Etkin profiller girişte çalışsın',
@@ -294,6 +299,10 @@ const en: Copy = {
   eta: 'ETA',
   langTitle: 'Language',
   accentTitle: 'Accent color',
+  themeTitle: 'Theme',
+  themeDark: 'Dark',
+  themeLight: 'Light',
+  profileName: 'Profile name',
   systemTitle: 'System',
   launchAtLogin: 'Launch SyncDeck at startup',
   launchAtLoginHint: 'Run enabled profiles at login',
@@ -452,7 +461,12 @@ const Glyph = ({ size = 18, sw = 1.7, children }: GlyphProps) => (
 const FolderIcon = (p: { size?: number }) => <Glyph size={p.size}><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Glyph>
 const FileIcon = (p: { size?: number }) => <Glyph size={p.size}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></Glyph>
 const CloudIcon = (p: { size?: number }) => <Glyph size={p.size}><path d="M18 17.6A4 4 0 0 0 16 10h-1.3A6 6 0 1 0 4 15.5" /></Glyph>
-const GearIcon = () => <Glyph size={17}><circle cx="12" cy="12" r="3.1" /><path d="M19.4 13a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V19a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.5 17.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H2a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 3.6 8.5a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H8a1.7 1.7 0 0 0 1-1.56V2a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V8a1.7 1.7 0 0 0 1.56 1H22a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z" /></Glyph>
+const GearIcon = () => (
+  <Glyph size={17}>
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
+  </Glyph>
+)
 const ShieldIcon = () => <Glyph size={18} sw={1.8}><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5z" /><path d="M9 12l2 2 4-4" /></Glyph>
 const InterfaceIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><path d="M3.5 9h17M3.5 15h17" /><path d="M12 3a13 13 0 0 1 0 18 13 13 0 0 1 0-18z" /></Glyph>
 const ServerIcon = (p: { size?: number }) => <Glyph size={p.size ?? 16}><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Glyph>
@@ -499,12 +513,7 @@ const newProfile = (): SyncProfile => ({
   extraArgs: '',
 })
 
-const EQ_BARS = Array.from({ length: 22 }, (_, i) => ({
-  base: (0.25 + ((i * 37) % 70) / 100).toFixed(2),
-  accent: i % 3 === 0,
-  dur: (0.7 + ((i * 13) % 9) / 10).toFixed(2) + 's',
-  delay: '-' + ((i * 7) % 11) / 10 + 's',
-}))
+const TRANSFER_BAR_LIMIT = 34
 
 /* ============================================================ component */
 function App() {
@@ -514,9 +523,11 @@ function App() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<SyncProgress | null>(null)
+  const [transferBars, setTransferBars] = useState<TransferEvent[]>([])
 
   const [accentName, setAccentName] = useState<AccentName>(() => (localStorage.getItem('sd_accent') as AccentName) || 'Mint')
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('sd_lang') as Language) || 'tr')
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => (localStorage.getItem('sd_theme') as 'dark' | 'light') || 'dark')
 
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'interface' | 'clients' | 'about'>('interface')
@@ -545,7 +556,8 @@ function App() {
   const remotes = state?.remotes ?? []
   const clients = useMemo<RemoteClient[]>(() => {
     const r = state?.remotes ?? []
-    return state?.clients?.length ? state.clients : r.map((name) => ({ name, type: '' }))
+    const source = state?.clients?.length ? state.clients : r.map((name) => ({ name, type: '' }))
+    return Array.from(new Map(source.map((client) => [client.name, client])).values())
   }, [state])
   const selectedRun = selectedId && state ? state.lastRun[selectedId] : null
   const canSave = Boolean(draft.name.trim() && draft.source.trim() && draft.destination.trim())
@@ -570,6 +582,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sd_lang', language)
   }, [language])
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('sd_theme', theme)
+  }, [theme])
 
   // fetch quota (rclone about) for each client when the Clients tab opens
   useEffect(() => {
@@ -590,6 +606,17 @@ function App() {
   useEffect(() => {
     const unsub = api.onSyncProgress((data) => {
       setProgress(data)
+      if (data.running && data.transferEvents?.length) {
+        setTransferBars((current) => {
+          const next = [...current]
+          for (const event of data.transferEvents || []) {
+            const existing = next.findIndex((item) => item.id === event.id)
+            if (existing >= 0) next[existing] = { ...next[existing], ...event }
+            else next.push(event)
+          }
+          return next.slice(-TRANSFER_BAR_LIMIT)
+        })
+      }
       if (!data.running) window.setTimeout(() => setProgress((cur) => (cur && !cur.running ? null : cur)), 4000)
     })
     return unsub
@@ -597,12 +624,16 @@ function App() {
 
   async function load(preferredId: string | null = selectedId) {
     setError(null)
-    const next = await api.getState()
-    setState(next)
-    const profile = next.profiles.find((p) => p.id === preferredId) || next.profiles[0]
-    if (profile) {
-      setSelectedId(profile.id)
-      setDraft(profile)
+    try {
+      const next = await api.getState()
+      setState(next)
+      const profile = next.profiles.find((p) => p.id === preferredId) || next.profiles[0]
+      if (profile) {
+        setSelectedId(profile.id)
+        setDraft(profile)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -678,6 +709,7 @@ function App() {
       api.cancelSync(selectedId).catch(() => undefined)
       return
     }
+    setTransferBars([])
     withBusy('run', async () => {
       setState(await api.runSync(selectedId))
     })
@@ -852,6 +884,21 @@ function App() {
   }
 
   /* ---- engine unavailable guard ---- */
+  if (!state) {
+    return (
+      <IonApp>
+        <div className="sd-root sd-engine-block" style={{ '--accent': accent } as CSSProperties}>
+          <div className="sd-engine-card">
+            <div className="sd-engine-ico"><Logo /></div>
+            <h1>{error ? 'SyncDeck başlatılamadı' : 'SyncDeck yükleniyor'}</h1>
+            <p>{error || 'Motor ve istemci yapılandırması hazırlanıyor.'}</p>
+            {error && <button className="sl-btn sl-btn--sm" onClick={() => load(null)}>{t.retry}</button>}
+          </div>
+        </div>
+      </IonApp>
+    )
+  }
+
   if (state && !state.rclonePath) {
     return (
       <IonApp>
@@ -931,7 +978,14 @@ function App() {
               <div className="sd-editor-head">
                 <div>
                   <div className="sd-kicker">{t.activeKicker}</div>
-                  <h1 className="sd-editor-title">{draft.name || t.newProfileTitle}</h1>
+                  <input
+                    className="sd-editor-title sd-editor-title--input"
+                    value={draft.name}
+                    onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                    placeholder={t.newProfileTitle}
+                    aria-label={t.profileName}
+                    spellCheck={false}
+                  />
                 </div>
                 <div className="sd-editor-actions">
                   <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={!selectedId} onClick={runOrStop}>{running ? t.stop : t.run}</button>
@@ -1041,7 +1095,7 @@ function App() {
         </div>
 
         {/* ============ STATUS BAR ============ */}
-        <StatusBar t={t} accent={accent} running={running} progress={progress} />
+        <StatusBar t={t} accent={accent} running={running} progress={progress} transferBars={transferBars} />
 
         {/* ============ SETTINGS ============ */}
         {settingsOpen && (
@@ -1078,6 +1132,24 @@ function App() {
                       <div className="sd-accents">
                         {ACCENTS.map((a) => (
                           <button key={a.name} className="sd-swatch" title={a.name} aria-label={a.name} style={{ background: a.color, borderColor: a.name === accentName ? 'var(--ink)' : 'transparent' }} onClick={() => setAccentName(a.name)} />
+                        ))}
+                      </div>
+                      <div className="sd-panel__label" style={{ margin: '30px 0 14px' }}>{t.themeTitle}</div>
+                      <div className="sd-themetoggle" role="radiogroup" aria-label={t.themeTitle}>
+                        {([
+                          { id: 'dark' as const, label: t.themeDark },
+                          { id: 'light' as const, label: t.themeLight },
+                        ]).map((opt) => (
+                          <button
+                            key={opt.id}
+                            role="radio"
+                            aria-checked={theme === opt.id}
+                            className={`sd-themebtn${theme === opt.id ? ' is-active' : ''}`}
+                            onClick={() => setTheme(opt.id)}
+                          >
+                            <span className={`sd-themeswatch sd-themeswatch--${opt.id}`} aria-hidden="true" />
+                            {opt.label}
+                          </button>
                         ))}
                       </div>
                       <div className="sd-panel__label" style={{ margin: '30px 0 14px' }}>{t.systemTitle}</div>
@@ -1286,8 +1358,8 @@ function App() {
                 ) : pickerItems.length === 0 ? (
                   <div className="sd-empty">{t.pickerEmpty}</div>
                 ) : (
-                  pickerItems.map((it) => (
-                    <button key={it.name} className="sd-fileitem" disabled={!it.isDir} onClick={() => it.isDir && pickerInto(it.name)}>
+                  pickerItems.map((it, index) => (
+                    <button key={`${it.name}-${index}`} className="sd-fileitem" disabled={!it.isDir} onClick={() => it.isDir && pickerInto(it.name)}>
                       <span className="sd-fileitem__icon" style={{ color: it.isDir ? 'var(--accent)' : 'var(--ink-faint)' }}>{it.isDir ? <FolderIcon size={18} /> : <FileIcon size={18} />}</span>
                       <span className="sd-fileitem__name">{it.name}</span>
                       <span className="sd-fileitem__meta">{it.isDir ? '' : formatSize(it.size)}</span>
@@ -1311,7 +1383,19 @@ function App() {
 }
 
 /* ============================================================ status bar */
-function StatusBar({ t, accent, running, progress }: { t: Copy; accent: string; running: boolean; progress: SyncProgress | null }) {
+function StatusBar({
+  t,
+  accent,
+  running,
+  progress,
+  transferBars,
+}: {
+  t: Copy;
+  accent: string;
+  running: boolean;
+  progress: SyncProgress | null;
+  transferBars: TransferEvent[];
+}) {
   const pct = progress?.pct ?? 0
   const filesText =
     running && progress && progress.files != null
@@ -1326,9 +1410,17 @@ function StatusBar({ t, accent, running, progress }: { t: Copy; accent: string; 
         <div><div className="sd-status__cap">{t.statusTitle}</div><div className="sd-status__val">{running ? t.syncing : t.idle}</div></div>
       </div>
       <div className="sd-status__seg sd-status__eq-seg">
-        <div className="sd-eq" aria-hidden="true">
-          {EQ_BARS.map((b, i) => (
-            <span key={i} style={{ transform: `scaleY(${b.base})`, background: b.accent ? accent : `color-mix(in oklch, ${accent} 45%, transparent)`, animationDuration: b.dur, animationDelay: b.delay, animationPlayState: running ? 'running' : 'paused' }} />
+        <div className="sd-eq" aria-label="Dosya aktarım göstergesi">
+          {transferBars.length === 0 ? (
+            <span className="sd-filebar is-empty" />
+          ) : transferBars.map((bar) => (
+            <span
+              key={bar.id}
+              className={`sd-filebar is-${bar.direction} is-${bar.status}`}
+              title={`${bar.name} · ${bar.pct}%`}
+            >
+              <span style={{ height: `${running ? Math.max(8, Math.min(100, bar.pct)) : bar.pct}%` }} />
+            </span>
           ))}
         </div>
         <div><div className="sd-status__cap">{t.speed}</div><div className="sd-status__val ac">{running ? progress?.speed || '—' : '—'}</div></div>

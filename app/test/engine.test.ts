@@ -7,6 +7,7 @@ import {
   humanRate,
   humanEta,
   progressFromStats,
+  fileEventFromLogEntry,
   parseStats,
 } from '../electron/lib/engine.cjs'
 
@@ -75,6 +76,34 @@ describe('progressFromStats', () => {
   })
   it('returns null for non-objects', () => {
     expect(progressFromStats(null)).toBeNull()
+  })
+  it('maps active rclone transfers to file bar events', () => {
+    const p = progressFromStats(
+      {
+        bytes: 512,
+        totalBytes: 1024,
+        transferring: [{ name: 'keepass.kdbx', bytes: 512, size: 1024 }],
+      },
+      'upload',
+    )
+    expect(p.transferEvents).toEqual([
+      { id: 'upload:keepass.kdbx', name: 'keepass.kdbx', direction: 'upload', pct: 50, status: 'active' },
+    ])
+  })
+})
+
+describe('fileEventFromLogEntry', () => {
+  it('creates a done event from copied object log entries', () => {
+    expect(fileEventFromLogEntry({ msg: 'Copied (new)', object: 'keepass.kdbx' }, 'download')).toEqual({
+      id: 'download:keepass.kdbx',
+      name: 'keepass.kdbx',
+      direction: 'download',
+      pct: 100,
+      status: 'done',
+    })
+  })
+  it('ignores non-file log entries', () => {
+    expect(fileEventFromLogEntry({ msg: 'Starting sync' }, 'upload')).toBeNull()
   })
 })
 
