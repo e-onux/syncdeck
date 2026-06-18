@@ -20,7 +20,7 @@ Because the app is distributed **unsigned** (free, no Apple Developer account), 
 
 ### Signing & notarization (optional, removes the macOS prompt)
 
-To make macOS downloads open with no command, build with an Apple Developer ID. Add these repo secrets and the release workflow signs (and notarizes) automatically:
+To make macOS downloads open with no command, build with an Apple Developer ID. Add these repo secrets, then wire them as `env` on the bundle step in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (a commented stub marks the spot — they are not wired by default because an empty `CSC_LINK` makes electron-builder abort):
 
 - `CSC_LINK` — base64 of your Developer ID `.p12`
 - `CSC_KEY_PASSWORD` — the `.p12` password

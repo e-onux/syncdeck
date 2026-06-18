@@ -51,16 +51,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RCLONE_TARGETS: ${{ matrix.rclone_targets }}
-          # Optional macOS Developer ID signing — when these repo secrets are set,
-          # electron-builder signs (and, with the Apple* vars, notarizes) the app
-          # so downloads open without the "is damaged" quarantine prompt. When
-          # empty (the default), the build is ad-hoc signed and users clear the
-          # quarantine once (see the release notes).
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # To enable macOS Developer ID signing + notarization, add the signing
+        # secrets (see app/README.md) and pass them here as env, e.g.
+        #   CSC_LINK / CSC_KEY_PASSWORD / APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD /
+        #   APPLE_TEAM_ID. They are intentionally NOT wired by default: an empty
+        # CSC_LINK makes electron-builder resolve "" to the cwd and abort, so the
+        # vars must only be present when actually populated.
       - uses: actions/upload-artifact@v4
         with:
           name: syncdeck-${{ matrix.name }}
