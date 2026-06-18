@@ -7,6 +7,11 @@
     "name": "e-onux",
     "email": "e-onux@users.noreply.github.com"
   },
+  "homepage": "https://sidrelabs.com/syncdeck",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/e-onux/syncdeck.git"
+  },
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -25,6 +30,11 @@
   "build": {
     "appId": "com.emironuk.syncdeck",
     "productName": "SyncDeck",
+    "publish": {
+      "provider": "github",
+      "owner": "e-onux",
+      "repo": "syncdeck"
+    },
     "files": [
       "dist/**/*",
       "electron/**/*",
