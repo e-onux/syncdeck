@@ -24,7 +24,7 @@ import {
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.2.0'
+const VERSION = '0.2.1'
 
 /* ============================================================ demo fallback (browser dev) */
 const demoProfile: SyncProfile = {
