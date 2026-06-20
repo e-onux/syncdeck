@@ -1,7 +1,7 @@
 {
   "name": "syncdeck",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A cross-platform graphical wrapper for rclone.",
   "author": {
     "name": "e-onux",

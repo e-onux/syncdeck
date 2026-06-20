@@ -44,6 +44,18 @@ export function remoteOf(destination: string, remotes: string[]): string {
   return remotes.find((r) => destination.startsWith(r)) || ''
 }
 
+// An rclone remote path looks like "name:" or "name:path" — not a local
+// "/Users/…" path nor a Windows "C:\" drive (colon followed by a slash).
+export function looksRemote(path: string): boolean {
+  return /^[A-Za-z0-9][\w .+-]*:(?![\\/])/.test(path)
+}
+
+// Which side (source/destination) is the cloud endpoint, given an empty value
+// defaults to local for the source and cloud for the destination.
+export function isCloudSide(value: string, isSource: boolean): boolean {
+  return value ? looksRemote(value) : !isSource
+}
+
 export function clientLabel(name: string): string {
   return name.replace(/:$/, '')
 }

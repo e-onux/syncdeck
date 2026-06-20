@@ -5,6 +5,8 @@ import {
   clientLabel,
   formatSize,
   hasFlag,
+  isCloudSide,
+  looksRemote,
   remoteOf,
   setFlag,
   tokenize,
@@ -56,6 +58,19 @@ describe('path helpers', () => {
   })
   it('clientLabel strips the trailing colon', () => {
     expect(clientLabel('isdrive:')).toBe('isdrive')
+  })
+  it('looksRemote distinguishes remotes from local paths', () => {
+    expect(looksRemote('isdrive:Backups/x')).toBe(true)
+    expect(looksRemote('isdrive:')).toBe(true)
+    expect(looksRemote('/Users/emir/Documents')).toBe(false)
+    expect(looksRemote('C:\\Users')).toBe(false)
+    expect(looksRemote('')).toBe(false)
+  })
+  it('isCloudSide defaults empty values by role', () => {
+    expect(isCloudSide('', true)).toBe(false) // empty source → local
+    expect(isCloudSide('', false)).toBe(true) // empty destination → cloud
+    expect(isCloudSide('isdrive:x', true)).toBe(true)
+    expect(isCloudSide('/local', false)).toBe(false)
   })
   it('formatSize humanizes bytes', () => {
     expect(formatSize(-1)).toBe('')
