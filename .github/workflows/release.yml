@@ -84,22 +84,17 @@ jobs:
           generate_release_notes: true
           append_body: true
           body: |
-            ## İlk açılış / First launch
+            ## First launch
 
-            SyncDeck imzasız dağıtılır (ücretsiz, Apple Developer hesabı olmadan).
-            İşletim sistemin uyarı gösterirse, tek seferlik adımlar aşağıda.
+            SyncDeck bundles rclone, so no separate rclone install is required.
 
-            **macOS** — "SyncDeck beschädigt / is damaged" derse, bu **bozuk dosya değildir**;
-            sadece Gatekeeper karantinasıdır. DMG'den uygulamayı `Applications`'a sürükle, sonra
-            Terminal'de bir kez çalıştır:
+            The macOS build is distributed without Apple notarization. If macOS reports that
+            SyncDeck is damaged, move the app to Applications and run this once:
             ```bash
             xattr -dr com.apple.quarantine /Applications/SyncDeck.app
             ```
-            Ardından normal şekilde açılır. (Sürümlü/notarize edilmiş yapı için README'ye bak.)
+            Then open SyncDeck normally.
 
-            **Windows** — "Windows protected your PC" çıkarsa: **More info → Run anyway**.
+            **Windows** — if "Windows protected your PC" appears, choose **More info → Run anyway**.
 
-            **Linux** — AppImage'i çalıştırılabilir yap: `chmod +x SyncDeck-*.AppImage`, ya da `.deb` paketini kur.
-
-            ---
-            rclone uygulamayla birlikte gelir; ayrıca kurman gerekmez.
+            **Linux** — make the AppImage executable with `chmod +x SyncDeck-*.AppImage`, or install the `.deb` package.
