@@ -102,6 +102,7 @@ const demoApi: Window['rcloneSyncer'] = {
   testRemote: async () => ({ ok: true }),
   deleteRemote: async () => demoState({ remotes: ['isdrive:', 'arsiv:'], clients: [{ name: 'isdrive:', type: 'drive' }, { name: 'arsiv:', type: 's3' }] }),
   aboutRemote: async () => ({ supported: true, total: '5 TiB', used: '2.9 TiB', free: '2.1 TiB' }),
+  mkdirRemote: async () => true,
   listRemote: async () => [
     { name: 'Belgeler', isDir: true, size: -1 },
     { name: 'Fotoğraflar', isDir: true, size: -1 },
@@ -248,6 +249,11 @@ const tr = {
   pickerEmpty: 'Bu klasör boş.',
   pickerError: 'Bu konum listelenemedi.',
   pickerLoading: 'Yükleniyor…',
+  pickerNewFolder: 'Yeni klasör',
+  pickerFolderName: 'Klasör adı',
+  pickerCreate: 'Oluştur',
+  pickerCreating: 'Oluşturuluyor…',
+  pickerNameInvalid: 'Klasör adı / veya \\ içeremez.',
   pickerCancel: 'İptal',
   pickerConfirm: 'Bu klasörü seç',
   cloud: 'Bulut',
@@ -380,6 +386,11 @@ const en: Copy = {
   pickerEmpty: 'This folder is empty.',
   pickerError: 'Could not list this location.',
   pickerLoading: 'Loading…',
+  pickerNewFolder: 'New folder',
+  pickerFolderName: 'Folder name',
+  pickerCreate: 'Create',
+  pickerCreating: 'Creating…',
+  pickerNameInvalid: 'Folder name cannot contain / or \\.',
   pickerCancel: 'Cancel',
   pickerConfirm: 'Select this folder',
   cloud: 'Cloud',
@@ -687,6 +698,8 @@ function App() {
   const [pickerStack, setPickerStack] = useState<string[]>([])
   const [pickerItems, setPickerItems] = useState<RemoteEntry[]>([])
   const [pickerBusy, setPickerBusy] = useState(false)
+  const [pickerMkdirBusy, setPickerMkdirBusy] = useState(false)
+  const [pickerNewName, setPickerNewName] = useState('')
   const [pickerError, setPickerError] = useState<string | null>(null)
   const [pickerField, setPickerField] = useState<'source' | 'destination'>('destination')
 
@@ -927,6 +940,7 @@ function App() {
     setPickerField(field)
     setPickerRemote(remote)
     setPickerStack(start)
+    setPickerNewName('')
     setPickerOpen(true)
     loadPicker(remote, start)
   }
@@ -943,6 +957,27 @@ function App() {
   function confirmPicker() {
     setDraft((d) => ({ ...d, [pickerField]: `${pickerRemote}${pickerStack.join('/')}` }))
     setPickerOpen(false)
+  }
+  async function createPickerFolder() {
+    const name = pickerNewName.trim().replace(/^\/+|\/+$/g, '')
+    if (!name || pickerMkdirBusy) return
+    if (/[\\/]/.test(name)) {
+      setPickerError(t.pickerNameInvalid)
+      return
+    }
+    setPickerMkdirBusy(true)
+    setPickerError(null)
+    try {
+      const base = pickerStack.join('/')
+      const target = `${pickerRemote}${[base, name].filter(Boolean).join('/')}`
+      await api.mkdirRemote(target)
+      setPickerNewName('')
+      await loadPicker(pickerRemote, pickerStack)
+    } catch (err) {
+      setPickerError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setPickerMkdirBusy(false)
+    }
   }
 
   // ---- wizard ----
@@ -1553,6 +1588,22 @@ function App() {
                     <button className="sd-crumb" onClick={() => pickerCrumb(i + 1)} style={{ color: i === pickerStack.length - 1 ? 'var(--accent)' : 'var(--ink-dim)' }}>{c}</button>
                   </span>
                 ))}
+              </div>
+              <div className="sd-picker__mkdir">
+                <span className="sd-picker__mkdir-label">{t.pickerNewFolder}</span>
+                <input
+                  className="sl-input sd-picker__mkdir-input"
+                  value={pickerNewName}
+                  onChange={(e) => setPickerNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') createPickerFolder()
+                  }}
+                  placeholder={t.pickerFolderName}
+                  disabled={pickerMkdirBusy}
+                />
+                <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={!pickerNewName.trim() || pickerMkdirBusy || pickerBusy} onClick={createPickerFolder}>
+                  {pickerMkdirBusy ? t.pickerCreating : t.pickerCreate}
+                </button>
               </div>
               <div className="sd-modal__body sd-picker__list">
                 {pickerBusy ? (

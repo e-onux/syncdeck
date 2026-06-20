@@ -339,6 +339,9 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-crumbwrap { display: inline-flex; align-items: center; gap: 4px; }
 .sd-crumb { appearance: none; cursor: pointer; padding: 5px 9px; border: 0; background: transparent; font-family: var(--ff-mono); font-size: .66rem; letter-spacing: .06em; }
 .sd-crumb__sep { color: var(--ink-faint); font-size: .7rem; }
+.sd-picker__mkdir { display: grid; grid-template-columns: auto minmax(120px, 1fr) auto; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line-soft); background: color-mix(in oklch, var(--surface) 60%, transparent); }
+.sd-picker__mkdir-label { font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.sd-picker__mkdir-input { min-height: 34px; padding-top: 8px; padding-bottom: 8px; }
 .sd-picker__list { padding: 8px 12px; }
 .sd-fileitem { width: 100%; text-align: left; appearance: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; transition: background .15s; }
 .sd-fileitem:hover:not(:disabled) { background: var(--surface); }

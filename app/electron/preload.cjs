@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('rcloneSyncer', {
   deleteRemote: (name) => ipcRenderer.invoke('remote:delete', name),
   aboutRemote: (name) => ipcRenderer.invoke('remote:about', name),
   listRemote: (remotePath) => ipcRenderer.invoke('remote:list', remotePath),
+  mkdirRemote: (remotePath) => ipcRenderer.invoke('remote:mkdir', remotePath),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   openAbout: () => ipcRenderer.invoke('about:open'),
   onSyncProgress: (callback) => {
