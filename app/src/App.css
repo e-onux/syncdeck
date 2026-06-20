@@ -178,6 +178,7 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-clientchip--add { border-style: dashed; color: var(--ink-faint); }
 .sd-clientchip__plus { font-size: 1rem; line-height: 1; }
 .sd-clientchip__addlabel { font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; }
+.sd-provider-icon { display: inline-block; flex: 0 0 auto; background: currentColor; -webkit-mask: var(--provider-icon-url) center / contain no-repeat; mask: var(--provider-icon-url) center / contain no-repeat; }
 
 .sd-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 8px; }
 .sd-mode { appearance: none; cursor: pointer; text-align: left; padding: 13px 15px; border: 1px solid var(--line-soft); background: transparent; border-radius: var(--r-sharp); transition: border-color .18s, background .18s; }
@@ -313,7 +314,7 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-prov { appearance: none; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-height: 92px; padding: 14px; border: 1px solid var(--line-soft); background: var(--surface); border-radius: var(--r-sharp); transition: border-color .18s, background .18s; }
 .sd-prov:hover { border-color: var(--accent); background: var(--surface-2); }
 .sd-prov.is-active { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 8%, transparent); }
-.sd-prov__icon { color: var(--ink-dim); }
+.sd-prov__icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; color: var(--ink-dim); }
 .sd-prov.is-active .sd-prov__icon { color: var(--accent); }
 .sd-prov__name { font-size: .84rem; font-weight: 600; color: var(--ink); text-align: left; }
 .sd-wiz__form { display: flex; flex-direction: column; gap: 18px; }
