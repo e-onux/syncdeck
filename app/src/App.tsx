@@ -18,13 +18,14 @@ import {
   clientLabel,
   formatSize,
   hasFlag,
+  isCloudSide,
   remoteOf,
   setFlag,
 } from './lib/rclone'
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.2.2'
+const VERSION = '0.2.3'
 
 /* ============================================================ demo fallback (browser dev) */
 const demoProfile: SyncProfile = {
@@ -137,9 +138,11 @@ const tr = {
   run: '▶ Şimdi çalıştır',
   stop: '■ Durdur',
   save: 'Kaydet',
-  sourceLabel: 'Kaynak · yerel',
+  sourceLabel: 'Kaynak',
+  routeLocal: 'yerel',
+  routeCloud: 'bulut',
   browse: 'Gözat',
-  destLabel: 'Hedef · bulut',
+  destLabel: 'Hedef',
   browseCloud: 'Bulutta gözat',
   swapRoute: 'Kaynak ve hedefi değiştir',
   noFolder: 'Klasör seçilmedi',
@@ -266,9 +269,11 @@ const en: Copy = {
   run: '▶ Run now',
   stop: '■ Stop',
   save: 'Save',
-  sourceLabel: 'Source · local',
+  sourceLabel: 'Source',
+  routeLocal: 'local',
+  routeCloud: 'cloud',
   browse: 'Browse',
-  destLabel: 'Destination · cloud',
+  destLabel: 'Destination',
   browseCloud: 'Browse cloud',
   swapRoute: 'Swap source and destination',
   noFolder: 'No folder selected',
@@ -580,6 +585,7 @@ function App() {
   const [pickerItems, setPickerItems] = useState<RemoteEntry[]>([])
   const [pickerBusy, setPickerBusy] = useState(false)
   const [pickerError, setPickerError] = useState<string | null>(null)
+  const [pickerField, setPickerField] = useState<'source' | 'destination'>('destination')
 
   const t = TRANSLATIONS[language]
   const accent = ACCENTS.find((a) => a.name === accentName)?.color || '#5fd6b6'
@@ -593,7 +599,13 @@ function App() {
   const selectedRun = selectedId && state ? state.lastRun[selectedId] : null
   const canSave = Boolean(draft.name.trim() && draft.source.trim() && draft.destination.trim())
   const running = busy === 'run' || Boolean(progress?.running)
-  const activeRemote = remoteOf(draft.destination, remotes)
+  // Each route box follows its actual content: a remote ("name:…") is the cloud
+  // side, a filesystem path is local. After a swap, labels/buttons/client-picker
+  // track the swapped values instead of assuming source=local, dest=cloud.
+  const srcCloud = isCloudSide(draft.source, true)
+  const dstCloud = isCloudSide(draft.destination, false)
+  const cloudField: 'source' | 'destination' = dstCloud ? 'destination' : srcCloud ? 'source' : 'destination'
+  const activeRemote = remoteOf(draft[cloudField], remotes)
 
   const modeCards = [
     { id: 'sync' as SyncMode, title: t.mirror, cmd: 'sync', desc: t.mirrorDesc, tag: t.tagMirror },
@@ -753,10 +765,10 @@ function App() {
       setState(await api.runSync(selectedId))
     })
   }
-  const browseSource = () =>
+  const browseLocal = (field: 'source' | 'destination') =>
     withBusy('browse', async () => {
       const folder = await api.chooseFolder()
-      if (folder) setDraft((d) => ({ ...d, source: folder }))
+      if (folder) setDraft((d) => ({ ...d, [field]: folder }))
     })
   const toggleLaunch = () =>
     withBusy('launch', async () => {
@@ -769,9 +781,11 @@ function App() {
     setDraft((d) => ({ ...d, extraArgs: setFlag(d.extraArgs, OPTION_FLAGS[id], !hasFlag(d.extraArgs, OPTION_FLAGS[id])) }))
   const selectClient = (remote: string) =>
     setDraft((d) => {
-      const cur = remoteOf(d.destination, remotes)
-      const path = cur ? d.destination.slice(cur.length) : d.destination
-      return { ...d, destination: `${remote}${path.replace(/^\/+/, '')}` }
+      const field = isCloudSide(d.destination, false) ? 'destination' : isCloudSide(d.source, true) ? 'source' : 'destination'
+      const value = d[field]
+      const cur = remoteOf(value, remotes)
+      const rest = cur ? value.slice(cur.length) : value.includes(':') ? value.slice(value.indexOf(':') + 1) : ''
+      return { ...d, [field]: `${remote}${rest.replace(/^\/+/, '')}` }
     })
 
   // ---- cloud picker ----
@@ -789,13 +803,16 @@ function App() {
       setPickerBusy(false)
     }
   }
-  function openPicker() {
-    const remote = activeRemote || clients[0]?.name || ''
+  function openPicker(field: 'source' | 'destination') {
+    const current = draft[field]
+    const known = remoteOf(current, remotes)
+    const remote = known || clients[0]?.name || ''
     if (!remote) {
       openSettings('clients')
       return
     }
-    const start = activeRemote ? draft.destination.slice(remote.length).split('/').filter(Boolean) : []
+    const start = known ? current.slice(known.length).split('/').filter(Boolean) : []
+    setPickerField(field)
     setPickerRemote(remote)
     setPickerStack(start)
     setPickerOpen(true)
@@ -812,7 +829,7 @@ function App() {
     loadPicker(pickerRemote, stack)
   }
   function confirmPicker() {
-    setDraft((d) => ({ ...d, destination: `${pickerRemote}${pickerStack.join('/')}` }))
+    setDraft((d) => ({ ...d, [pickerField]: `${pickerRemote}${pickerStack.join('/')}` }))
     setPickerOpen(false)
   }
 
@@ -1036,15 +1053,23 @@ function App() {
               {/* source -> dest */}
               <div className="sd-route">
                 <div className="sl-card sd-route__box">
-                  <div className="sd-route__label"><span className="ac">01</span> {t.sourceLabel}</div>
+                  <div className="sd-route__label"><span className="ac">01</span> {t.sourceLabel} · {srcCloud ? t.routeCloud : t.routeLocal}</div>
                   <div className="sd-route__val">{draft.source || <span className="muted">{t.noFolder}</span>}</div>
-                  <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={browseSource}>{t.browse}</button>
+                  {srcCloud ? (
+                    <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={() => openPicker('source')}>{t.browseCloud}</button>
+                  ) : (
+                    <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={() => browseLocal('source')}>{t.browse}</button>
+                  )}
                 </div>
                 <button className="sd-route__arrow" onClick={swapRoute} title={t.swapRoute} aria-label={t.swapRoute}><SwapIcon /></button>
                 <div className="sl-card sd-route__box">
-                  <div className="sd-route__label"><span className="ac">02</span> {t.destLabel}</div>
+                  <div className="sd-route__label"><span className="ac">02</span> {t.destLabel} · {dstCloud ? t.routeCloud : t.routeLocal}</div>
                   <div className="sd-route__val">{draft.destination || <span className="muted">{t.noFolder}</span>}</div>
-                  <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={openPicker}>{t.browseCloud}</button>
+                  {dstCloud ? (
+                    <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={() => openPicker('destination')}>{t.browseCloud}</button>
+                  ) : (
+                    <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={() => browseLocal('destination')}>{t.browse}</button>
+                  )}
                 </div>
               </div>
 
