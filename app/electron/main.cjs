@@ -54,9 +54,9 @@ async function writeConfig(config) {
 
 async function appState() {
   const rclonePath = findRclone();
-  const [remotesResult, clientsResult] = rclonePath
-    ? await Promise.allSettled([listRemotes(rclonePath), dumpRemotes(rclonePath)])
-    : [{ status: 'fulfilled', value: [] }, { status: 'fulfilled', value: [] }];
+  const [remotesResult, clientsResult, backendTypesResult] = rclonePath
+    ? await Promise.allSettled([listRemotes(rclonePath), dumpRemotes(rclonePath), listBackendTypes(rclonePath)])
+    : [{ status: 'fulfilled', value: [] }, { status: 'fulfilled', value: [] }, { status: 'fulfilled', value: [] }];
 
   return {
     ...(await readConfig()),
@@ -66,6 +66,7 @@ async function appState() {
     platform: process.platform,
     remotes: remotesResult.status === 'fulfilled' ? remotesResult.value : [],
     clients: clientsResult.status === 'fulfilled' ? clientsResult.value : [],
+    backendTypes: backendTypesResult.status === 'fulfilled' ? backendTypesResult.value : [],
   };
 }
 
@@ -299,6 +300,45 @@ async function dumpRemotes(rclonePath = findRclone()) {
       name: `${name}:`,
       type: (value && value.type) || '',
     }));
+  } catch {
+    return [];
+  }
+}
+
+// Supported backend catalogue from the bundled/selected rclone binary. This
+// keeps the wizard aligned with the exact engine version shipped in SyncDeck.
+async function listBackendTypes(rclonePath = findRclone()) {
+  if (!rclonePath) return [];
+  const output = await captureRclone(['config', 'providers'], { timeoutMs: 10000 });
+  try {
+    const parsed = JSON.parse(output || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((provider) => provider && provider.Name && !provider.Hide)
+      .map((provider) => ({
+        id: String(provider.Prefix || provider.Name),
+        name: String(provider.Name),
+        description: String(provider.Description || provider.Name),
+        options: Array.isArray(provider.Options)
+          ? provider.Options
+              .filter((option) => option && option.Name && !option.Hide)
+              .map((option) => ({
+                name: String(option.Name),
+                help: String(option.Help || ''),
+                required: Boolean(option.Required),
+                advanced: Boolean(option.Advanced),
+                secret: Boolean(option.IsPassword || option.Sensitive),
+                type: String(option.Type || 'string'),
+                examples: Array.isArray(option.Examples)
+                  ? option.Examples.map((example) => ({
+                      value: String(example.Value || ''),
+                      help: String(example.Help || ''),
+                    }))
+                  : [],
+              }))
+          : [],
+      }))
+      .sort((a, b) => a.description.localeCompare(b.description));
   } catch {
     return [];
   }
