@@ -26,7 +26,12 @@ import {
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.2.3'
+const VERSION = '0.2.4'
+const PROVIDER_ICON_URLS = import.meta.glob('./assets/provider-icons/*.svg', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>
 
 /* ============================================================ demo fallback (browser dev) */
 const demoProfile: SyncProfile = {
@@ -582,6 +587,21 @@ const TrashIcon = () => <Glyph size={15}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a
 const SwapIcon = () => <Glyph size={18}><path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="M17 20l4-4-4-4" /><path d="M21 16H8" /></Glyph>
 
 const ProviderGlyph = ({ id, size = 18 }: { id: string; size?: number }) => {
+  const iconUrl = PROVIDER_ICON_URLS[`./assets/provider-icons/${id}.svg`]
+  if (iconUrl) {
+    return (
+      <span
+        className="sd-provider-icon"
+        style={{
+          '--provider-icon-url': `url("${iconUrl}")`,
+          width: size,
+          height: size,
+        } as CSSProperties}
+        aria-hidden="true"
+      />
+    )
+  }
+
   switch (id) {
     case 'drive':
       return <Glyph size={size} sw={1.6}><path d="M8 3 2.5 13l3 5 5.5-10z" /><path d="M16 3H8l8 14h-5" /><path d="M21.5 13 16 3l-2.7 5 5.4 10z" opacity=".55" /></Glyph>
