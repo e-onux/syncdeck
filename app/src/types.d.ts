@@ -24,6 +24,26 @@ export type RemoteClient = {
   type: string;
 };
 
+export type BackendOption = {
+  name: string;
+  help: string;
+  required: boolean;
+  advanced: boolean;
+  secret: boolean;
+  type: string;
+  examples?: Array<{
+    value: string;
+    help: string;
+  }>;
+};
+
+export type BackendType = {
+  id: string;
+  name: string;
+  description: string;
+  options: BackendOption[];
+};
+
 export type AppState = {
   launchAtLogin: boolean;
   profiles: SyncProfile[];
@@ -34,6 +54,7 @@ export type AppState = {
   platform?: string;
   remotes?: string[];
   clients?: RemoteClient[];
+  backendTypes?: BackendType[];
 };
 
 export type RemoteDraft = {

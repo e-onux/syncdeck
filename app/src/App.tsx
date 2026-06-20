@@ -4,6 +4,7 @@ import { IonApp } from '@ionic/react'
 import type {
   AboutInfo,
   AppState,
+  BackendType,
   RemoteClient,
   RemoteDraft,
   RemoteEntry,
@@ -56,6 +57,15 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
     { name: 'isdrive:', type: 'drive' },
     { name: 'arsiv:', type: 's3' },
     { name: 'b2cold:', type: 'b2' },
+  ],
+  backendTypes: [
+    { id: 'drive', name: 'drive', description: 'Google Drive', options: [] },
+    { id: 'dropbox', name: 'dropbox', description: 'Dropbox', options: [] },
+    { id: 's3', name: 's3', description: 'Amazon S3', options: [] },
+    { id: 'b2', name: 'b2', description: 'Backblaze B2', options: [] },
+    { id: 'sftp', name: 'sftp', description: 'SSH/SFTP', options: [] },
+    { id: 'webdav', name: 'webdav', description: 'WebDAV', options: [] },
+    { id: 'crypt', name: 'crypt', description: 'Encrypt/Decrypt a remote', options: [] },
   ],
   ...overrides,
 })
@@ -216,6 +226,7 @@ const tr = {
   wizStep2: 'Kimlik & ad',
   wizStep3: 'Gözden geçir & oluştur',
   wizTypePrompt: 'Bağlanmak istediğin bulut türünü seç. SyncDeck arka planda uygun yapılandırmayı oluşturur.',
+  providerSearch: 'Client ara',
   wizClientName: 'İstemci adı',
   wizClientNamePh: 'ör. İş Drive',
   wizCredNote: 'Kimlik bilgileri yalnızca yerel motor yapılandırmanda saklanır, hiçbir yere gönderilmez.',
@@ -347,6 +358,7 @@ const en: Copy = {
   wizStep2: 'Identity & name',
   wizStep3: 'Review & create',
   wizTypePrompt: 'Pick the cloud type you want to connect. SyncDeck builds the right configuration behind the scenes.',
+  providerSearch: 'Search clients',
   wizClientName: 'Client name',
   wizClientNamePh: 'e.g. Work Drive',
   wizCredNote: 'Credentials are stored only in your local engine config and never sent anywhere.',
@@ -408,7 +420,14 @@ const PROVIDER_TYPES = [
   { id: 'webdav', name: 'WebDAV' },
   { id: 'crypt', name: 'Şifreli (crypt)' },
 ] as const
-type ProviderId = (typeof PROVIDER_TYPES)[number]['id']
+type ProviderId = string
+
+const FALLBACK_BACKEND_TYPES: BackendType[] = PROVIDER_TYPES.map((provider) => ({
+  id: provider.id,
+  name: provider.id,
+  description: provider.name,
+  options: [],
+}))
 
 type ProviderField = { key: string; label: string; ph?: string; secret?: boolean; optional?: boolean }
 type ProviderConfig = { oauth: boolean; fields: ProviderField[] }
@@ -474,6 +493,69 @@ const PROVIDER_FIELDS: Record<ProviderId, ProviderConfig> = {
       { key: 'password2', label: 'Tuz (salt)', secret: true, optional: true },
     ],
   },
+}
+
+const KNOWN_OAUTH_TYPES = new Set([
+  'box',
+  'drive',
+  'dropbox',
+  'gphotos',
+  'hidrive',
+  'jottacloud',
+  'mailru',
+  'onedrive',
+  'pcloud',
+  'pikpak',
+  'premiumizeme',
+  'protondrive',
+  'putio',
+  'sharefile',
+  'yandex',
+  'zoho',
+])
+
+function optionLabel(name: string): string {
+  return name
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function optionPlaceholder(help: string, examples?: Array<{ value: string; help: string }>): string | undefined {
+  const example = examples?.find((item) => item.value)?.value
+  if (example) return example
+  const first = help.split(/\n+/).map((line) => line.trim()).find(Boolean)
+  return first && first.length <= 90 ? first : undefined
+}
+
+function providerName(type: BackendType): string {
+  return type.description || type.name || type.id
+}
+
+function providerConfigFor(type: string | null, backendTypes: BackendType[]): ProviderConfig | null {
+  if (!type) return null
+  const override = PROVIDER_FIELDS[type]
+  const backend = backendTypes.find((item) => item.id === type)
+  if (!backend) return override ?? null
+  const oauth = KNOWN_OAUTH_TYPES.has(type)
+  const dynamicFields = backend.options
+    .filter((option) => !option.advanced)
+    .filter((option) => !['token', 'config_is_local'].includes(option.name))
+    .filter((option) => option.required || !oauth || ['client_id', 'client_secret'].includes(option.name))
+    .slice(0, 12)
+    .map((option) => ({
+      key: option.name,
+      label: optionLabel(option.name),
+      ph: optionPlaceholder(option.help, option.examples),
+      secret: option.secret,
+      optional: !option.required,
+    }))
+
+  return {
+    oauth,
+    fields: dynamicFields.length || !override ? dynamicFields : override.fields,
+  }
 }
 
 /* ============================================================ inline icons (match the design) */
@@ -574,6 +656,7 @@ function App() {
   const [wizStep, setWizStep] = useState(1)
   const [wizType, setWizType] = useState<ProviderId | null>(null)
   const [wizName, setWizName] = useState('')
+  const [wizFilter, setWizFilter] = useState('')
   const [wizFields, setWizFields] = useState<Record<string, string>>({})
   const [wizToken, setWizToken] = useState('')
   const [wizAuthBusy, setWizAuthBusy] = useState(false)
@@ -591,6 +674,15 @@ function App() {
   const accent = ACCENTS.find((a) => a.name === accentName)?.color || '#5fd6b6'
   const profiles = state?.profiles ?? []
   const remotes = state?.remotes ?? []
+  const backendTypes = useMemo<BackendType[]>(() => {
+    const source = state?.backendTypes?.length ? state.backendTypes : FALLBACK_BACKEND_TYPES
+    return Array.from(new Map(source.map((type) => [type.id, type])).values())
+  }, [state])
+  const filteredBackendTypes = useMemo(() => {
+    const q = wizFilter.trim().toLowerCase()
+    if (!q) return backendTypes
+    return backendTypes.filter((type) => `${type.id} ${providerName(type)}`.toLowerCase().includes(q))
+  }, [backendTypes, wizFilter])
   const clients = useMemo<RemoteClient[]>(() => {
     const r = state?.remotes ?? []
     const source = state?.clients?.length ? state.clients : r.map((name) => ({ name, type: '' }))
@@ -838,13 +930,15 @@ function App() {
     setWizStep(1)
     setWizType(null)
     setWizName('')
+    setWizFilter('')
     setWizFields({})
     setWizToken('')
     setWizTest({ state: 'idle' })
     setWizardOpen(true)
   }
-  const providerCfg = wizType ? PROVIDER_FIELDS[wizType] : null
-  const wizNameFinal = wizName || (wizType ? PROVIDER_TYPES.find((p) => p.id === wizType)?.name ?? '' : '')
+  const providerCfg = providerConfigFor(wizType, backendTypes)
+  const wizBackend = backendTypes.find((p) => p.id === wizType)
+  const wizNameFinal = wizName || (wizBackend ? providerName(wizBackend) : '')
   const remoteSlug = wizNameFinal.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'yeni'
   const setWizField = (key: string, value: string) => {
     setWizFields((f) => ({ ...f, [key]: value }))
@@ -1332,11 +1426,17 @@ function App() {
                 {wizStep === 1 && (
                   <div>
                     <p className="sd-wiz__prompt">{t.wizTypePrompt}</p>
+                    <input
+                      className="sl-input sd-provsearch"
+                      value={wizFilter}
+                      onChange={(e) => setWizFilter(e.target.value)}
+                      placeholder={t.providerSearch}
+                    />
                     <div className="sd-provgrid">
-                      {PROVIDER_TYPES.map((p) => (
+                      {filteredBackendTypes.map((p) => (
                         <button key={p.id} className={`sd-prov${wizType === p.id ? ' is-active' : ''}`} onClick={() => setWizType(p.id)}>
                           <span className="sd-prov__icon"><ProviderGlyph id={p.id} size={24} /></span>
-                          <span className="sd-prov__name">{p.name}</span>
+                          <span className="sd-prov__name">{providerName(p)}</span>
                         </button>
                       ))}
                     </div>
@@ -1390,7 +1490,7 @@ function App() {
                     <p className="sd-wiz__prompt">{t.wizReviewPrompt}</p>
                     {[
                       { k: t.wizName, v: wizNameFinal },
-                      { k: t.wizType, v: PROVIDER_TYPES.find((p) => p.id === wizType)?.name ?? '' },
+                      { k: t.wizType, v: wizBackend ? providerName(wizBackend) : '' },
                       { k: t.wizRemote, v: `${remoteSlug}:` },
                       ...(providerCfg?.oauth && wizToken ? [{ k: 'OAuth', v: t.wizAuthorized }] : []),
                     ].map((r) => (
