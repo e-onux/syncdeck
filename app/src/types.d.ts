@@ -133,6 +133,7 @@ declare global {
       deleteRemote: (name: string) => Promise<AppState>;
       aboutRemote: (name: string) => Promise<AboutInfo>;
       listRemote: (remotePath: string) => Promise<RemoteEntry[]>;
+      mkdirRemote: (remotePath: string) => Promise<boolean>;
       openExternal: (url: string) => Promise<void>;
       openAbout: () => Promise<void>;
       onSyncProgress: (callback: (data: SyncProgress) => void) => () => void;

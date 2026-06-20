@@ -381,6 +381,29 @@ async function listRemoteDir(remotePath) {
   });
 }
 
+async function mkdirRemoteDir(remotePath) {
+  const rclone = findRclone();
+  if (!rclone) throw new Error('Motor bulunamadı.');
+  const target = String(remotePath || '').trim();
+  if (!target || !target.includes(':')) throw new Error('Geçersiz bulut yolu.');
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(rclone, ['mkdir', target], { env: process.env });
+    let output = '';
+    child.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve(true);
+      else reject(new Error(output.trim() || `Klasör oluşturulamadı (kod ${code}).`));
+    });
+  });
+}
+
 function normalizeRemote(remote) {
   const name = String(remote.name || '').trim().replace(/[:\s]+/g, '-');
   const type = String(remote.type || '').trim();
@@ -827,6 +850,7 @@ ipcMain.handle('sync:cancel', async (_event, id) => {
 });
 
 ipcMain.handle('remote:list', async (_event, remotePath) => listRemoteDir(remotePath));
+ipcMain.handle('remote:mkdir', async (_event, remotePath) => mkdirRemoteDir(remotePath));
 
 ipcMain.handle('open:external', async (_event, url) => {
   const target = String(url || '');
