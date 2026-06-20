@@ -24,7 +24,7 @@ import {
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.2.1'
+const VERSION = '0.2.2'
 
 /* ============================================================ demo fallback (browser dev) */
 const demoProfile: SyncProfile = {
@@ -35,6 +35,7 @@ const demoProfile: SyncProfile = {
   mode: 'sync',
   enabled: true,
   extraArgs: '--checksum --bwlimit 8M',
+  intervalMinutes: 60,
 }
 
 const demoState = (overrides: Partial<AppState> = {}): AppState => ({
@@ -45,8 +46,8 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
   platform: 'browser',
   profiles: [
     demoProfile,
-    { id: 'photos', name: 'Fotoğraf arşivi', source: '/Users/emir/Pictures', destination: 'arsiv:foto-2026', mode: 'copy', enabled: false, extraArgs: '' },
-    { id: 'code', name: 'Proje kaynağı', source: '/Users/emir/Code/sidrelabs', destination: 'b2cold:kod/snapshot', mode: 'sync', enabled: false, extraArgs: '' },
+    { id: 'photos', name: 'Fotoğraf arşivi', source: '/Users/emir/Pictures', destination: 'arsiv:foto-2026', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
+    { id: 'code', name: 'Proje kaynağı', source: '/Users/emir/Code/sidrelabs', destination: 'b2cold:kod/snapshot', mode: 'sync', enabled: false, extraArgs: '', intervalMinutes: 0 },
   ],
   lastRun: {},
   remotes: ['isdrive:', 'arsiv:', 'b2cold:'],
@@ -94,6 +95,7 @@ const demoApi: Window['rcloneSyncer'] = {
   openExternal: async () => undefined,
   openAbout: async () => undefined,
   onSyncProgress: () => () => undefined,
+  onStateRefresh: () => () => undefined,
 }
 
 const api: Window['rcloneSyncer'] = window.rcloneSyncer || demoApi
@@ -139,6 +141,7 @@ const tr = {
   browse: 'Gözat',
   destLabel: 'Hedef · bulut',
   browseCloud: 'Bulutta gözat',
+  swapRoute: 'Kaynak ve hedefi değiştir',
   noFolder: 'Klasör seçilmedi',
   targetClient: 'Hedef istemci',
   addClient: 'İstemci ekle',
@@ -160,6 +163,14 @@ const tr = {
   tagCheck: 'Test',
   quotaFree: 'boş',
   schedule: 'Zamanlama & seçenekler',
+  schedTitle: 'Çalışma sıklığı',
+  schedHint: 'Etkin profiller bu sıklıkta arka planda otomatik çalışır (kapalıyken bile, macOS daemon).',
+  schedManual: 'Manuel',
+  sched15: '15 dk',
+  sched30: '30 dk',
+  schedHourly: 'Saatlik',
+  sched6h: '6 saat',
+  schedDaily: 'Günlük',
   optChecksumLabel: 'Aktarım sonrası doğrula',
   optChecksumHint: 'Sağlama toplamlarını karşılaştır',
   optDryrunLabel: 'Önce kuru çalışma',
@@ -184,8 +195,8 @@ const tr = {
   themeLight: 'Açık',
   profileName: 'Profil adı',
   systemTitle: 'Sistem',
-  launchAtLogin: 'Açılışta SyncDeck’i başlat',
-  launchAtLoginHint: 'Etkin profiller girişte çalışsın',
+  launchAtLogin: 'Arka plan zamanlayıcı (daemon)',
+  launchAtLoginHint: 'Girişte başlat ve profilleri zamanlanan sıklıkta uygulama kapalıyken bile çalıştır',
   definedClients: 'Tanımlı istemciler',
   newClient: '+ Yeni istemci',
   noClients: 'Henüz istemci yok. Bir tane ekleyerek başla.',
@@ -259,6 +270,7 @@ const en: Copy = {
   browse: 'Browse',
   destLabel: 'Destination · cloud',
   browseCloud: 'Browse cloud',
+  swapRoute: 'Swap source and destination',
   noFolder: 'No folder selected',
   targetClient: 'Target client',
   addClient: 'Add client',
@@ -280,6 +292,14 @@ const en: Copy = {
   tagCheck: 'Check',
   quotaFree: 'free',
   schedule: 'Scheduling & options',
+  schedTitle: 'Run frequency',
+  schedHint: 'Enabled profiles run automatically in the background at this cadence (even when closed, via the macOS daemon).',
+  schedManual: 'Manual',
+  sched15: '15 min',
+  sched30: '30 min',
+  schedHourly: 'Hourly',
+  sched6h: '6 hours',
+  schedDaily: 'Daily',
   optChecksumLabel: 'Verify after transfer',
   optChecksumHint: 'Compare checksums',
   optDryrunLabel: 'Dry run first',
@@ -304,8 +324,8 @@ const en: Copy = {
   themeLight: 'Light',
   profileName: 'Profile name',
   systemTitle: 'System',
-  launchAtLogin: 'Launch SyncDeck at startup',
-  launchAtLoginHint: 'Run enabled profiles at login',
+  launchAtLogin: 'Background scheduler (daemon)',
+  launchAtLoginHint: 'Launch at login and run profiles on their schedule even when the app is closed',
   definedClients: 'Configured clients',
   newClient: '+ New client',
   noClients: 'No clients yet. Add one to get started.',
@@ -472,6 +492,7 @@ const InterfaceIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><pa
 const ServerIcon = (p: { size?: number }) => <Glyph size={p.size ?? 16}><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Glyph>
 const InfoIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></Glyph>
 const TrashIcon = () => <Glyph size={15}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></Glyph>
+const SwapIcon = () => <Glyph size={18}><path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="M17 20l4-4-4-4" /><path d="M21 16H8" /></Glyph>
 
 const ProviderGlyph = ({ id, size = 18 }: { id: string; size?: number }) => {
   switch (id) {
@@ -511,9 +532,19 @@ const newProfile = (): SyncProfile => ({
   mode: 'sync',
   enabled: true,
   extraArgs: '',
+  intervalMinutes: 0,
 })
 
 const TRANSFER_BAR_LIMIT = 34
+
+const SCHEDULE_PRESETS = [
+  { minutes: 0, key: 'schedManual' },
+  { minutes: 15, key: 'sched15' },
+  { minutes: 30, key: 'sched30' },
+  { minutes: 60, key: 'schedHourly' },
+  { minutes: 360, key: 'sched6h' },
+  { minutes: 1440, key: 'schedDaily' },
+] as const
 
 /* ============================================================ component */
 function App() {
@@ -622,6 +653,14 @@ function App() {
     return unsub
   }, [])
 
+  // The background scheduler refreshes app state (lastRun/log) after a run.
+  useEffect(() => {
+    const unsub = api.onStateRefresh(() => {
+      api.getState().then(setState).catch(() => undefined)
+    })
+    return unsub
+  }, [])
+
   async function load(preferredId: string | null = selectedId) {
     setError(null)
     try {
@@ -725,6 +764,7 @@ function App() {
     })
 
   const setMode = (mode: SyncMode) => setDraft((d) => ({ ...d, mode }))
+  const swapRoute = () => setDraft((d) => ({ ...d, source: d.destination, destination: d.source }))
   const toggleOption = (id: OptionId) =>
     setDraft((d) => ({ ...d, extraArgs: setFlag(d.extraArgs, OPTION_FLAGS[id], !hasFlag(d.extraArgs, OPTION_FLAGS[id])) }))
   const selectClient = (remote: string) =>
@@ -1000,7 +1040,7 @@ function App() {
                   <div className="sd-route__val">{draft.source || <span className="muted">{t.noFolder}</span>}</div>
                   <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={browseSource}>{t.browse}</button>
                 </div>
-                <div className="sd-route__arrow">→</div>
+                <button className="sd-route__arrow" onClick={swapRoute} title={t.swapRoute} aria-label={t.swapRoute}><SwapIcon /></button>
                 <div className="sl-card sd-route__box">
                   <div className="sd-route__label"><span className="ac">02</span> {t.destLabel}</div>
                   <div className="sd-route__val">{draft.destination || <span className="muted">{t.noFolder}</span>}</div>
@@ -1052,6 +1092,25 @@ function App() {
               {/* options */}
               <div className="sd-panel">
                 <div className="sd-panel__label">{t.schedule}</div>
+                <div className="sd-sched">
+                  <div className="sd-sched__head">
+                    <span className="sd-sched__title">{t.schedTitle}</span>
+                    <span className="sd-sched__hint">{t.schedHint}</span>
+                  </div>
+                  <div className="sd-sched__opts" role="radiogroup" aria-label={t.schedTitle}>
+                    {SCHEDULE_PRESETS.map((p) => (
+                      <button
+                        key={p.minutes}
+                        role="radio"
+                        aria-checked={draft.intervalMinutes === p.minutes}
+                        className={`sd-schedbtn${draft.intervalMinutes === p.minutes ? ' is-active' : ''}`}
+                        onClick={() => setDraft((d) => ({ ...d, intervalMinutes: p.minutes }))}
+                      >
+                        {t[p.key]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="sd-opts">
                   {([
                     { id: 'startup' as const, on: draft.enabled, label: t.optStartupLabel, hint: t.optStartupHint, flag: 'startup' },

@@ -1,7 +1,7 @@
 {
   "name": "syncdeck",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A cross-platform graphical wrapper for rclone.",
   "author": {
     "name": "e-onux",
@@ -19,11 +19,12 @@
     "electron": "electron .",
     "build": "tsc -b && vite build",
     "download:rclone": "node scripts/download-rclone.cjs",
-    "bundle": "npm run download:rclone && npm run build && electron-builder --publish never",
-    "bundle:mac": "npm run download:rclone && npm run build && electron-builder --mac --publish never",
-    "bundle:win": "npm run download:rclone && npm run build && electron-builder --win --publish never",
-    "bundle:linux": "npm run download:rclone && npm run build && electron-builder --linux --publish never",
+    "bundle": "npm run download:rclone && npm run build && npm run verify:build && electron-builder --publish never",
+    "bundle:mac": "npm run download:rclone && npm run build && npm run verify:build && electron-builder --mac --publish never",
+    "bundle:win": "npm run download:rclone && npm run build && npm run verify:build && electron-builder --win --publish never",
+    "bundle:linux": "npm run download:rclone && npm run build && npm run verify:build && electron-builder --linux --publish never",
     "lint": "eslint .",
+    "verify:build": "node scripts/verify-build.cjs",
     "test": "vitest run",
     "preview": "vite preview"
   },

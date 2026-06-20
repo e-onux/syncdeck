@@ -9,6 +9,7 @@ import {
   progressFromStats,
   fileEventFromLogEntry,
   parseStats,
+  isProfileDue,
 } from '../electron/lib/engine.cjs'
 
 describe('splitArgs', () => {
@@ -115,5 +116,22 @@ describe('parseStats (one-line fallback)', () => {
   })
   it('returns null on a non-matching line', () => {
     expect(parseStats('hello world')).toBeNull()
+  })
+})
+
+describe('isProfileDue (scheduler)', () => {
+  const now = Date.parse('2026-06-19T12:00:00Z')
+  it('skips disabled or non-interval profiles', () => {
+    expect(isProfileDue({ enabled: false, intervalMinutes: 60 }, null, now)).toBe(false)
+    expect(isProfileDue({ enabled: true, intervalMinutes: 0 }, null, now)).toBe(false)
+  })
+  it('runs an enabled interval profile that never ran', () => {
+    expect(isProfileDue({ enabled: true, intervalMinutes: 60 }, null, now)).toBe(true)
+  })
+  it('respects the elapsed interval', () => {
+    const recent = { finishedAt: '2026-06-19T11:30:00Z' } // 30 min ago
+    const old = { finishedAt: '2026-06-19T10:30:00Z' } // 90 min ago
+    expect(isProfileDue({ enabled: true, intervalMinutes: 60 }, recent, now)).toBe(false)
+    expect(isProfileDue({ enabled: true, intervalMinutes: 60 }, old, now)).toBe(true)
   })
 })
