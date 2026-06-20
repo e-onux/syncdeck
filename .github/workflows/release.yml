@@ -47,6 +47,7 @@ jobs:
         env:
           RCLONE_TARGETS: ${{ matrix.rclone_targets }}
       - run: npm run build
+      - run: npm run verify:build
       - run: npm run ${{ matrix.build_script }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

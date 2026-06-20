@@ -125,6 +125,19 @@ function parseStats(line) {
   };
 }
 
+// Whether a profile is due to run under the background scheduler: it must be
+// enabled with a positive interval, and either never run or last run at least
+// `intervalMinutes` ago.
+function isProfileDue(profile, lastRun, now = Date.now()) {
+  if (!profile || !profile.enabled) return false;
+  const interval = Number(profile.intervalMinutes) || 0;
+  if (interval <= 0) return false;
+  if (!lastRun || !lastRun.finishedAt) return true;
+  const last = Date.parse(lastRun.finishedAt);
+  if (!Number.isFinite(last)) return true;
+  return now - last >= interval * 60000;
+}
+
 module.exports = {
   SYNC_MODES,
   splitArgs,
@@ -136,4 +149,5 @@ module.exports = {
   progressFromStats,
   fileEventFromLogEntry,
   parseStats,
+  isProfileDue,
 };

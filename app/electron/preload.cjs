@@ -21,4 +21,9 @@ contextBridge.exposeInMainWorld('rcloneSyncer', {
     ipcRenderer.on('sync:progress', handler);
     return () => ipcRenderer.removeListener('sync:progress', handler);
   },
+  onStateRefresh: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('state:refresh', handler);
+    return () => ipcRenderer.removeListener('state:refresh', handler);
+  },
 });

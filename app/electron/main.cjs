@@ -10,14 +10,22 @@ const {
   progressFromStats,
   fileEventFromLogEntry,
   parseStats,
+  isProfileDue,
 } = require('./lib/engine.cjs');
 
 const APP_ID = 'com.emironuk.syncdeck';
 const APP_NAME = 'SyncDeck';
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
+// macOS LaunchAgent cadence for the background scheduler daemon (every 5 min);
+// the in-app ticker checks more often (every minute) while the window is open.
+const SCHEDULER_TICK_SECONDS = 300;
 
 // Keep the dock / menu-bar / userData name consistent with the packaged build.
 app.setName(APP_NAME);
+
+let mainWindow = null;
+let schedulerTimer = null;
+let schedulerTickRunning = false;
 const configPath = () => path.join(app.getPath('userData'), 'profiles.json');
 const launchAgentPath = () => path.join(os.homedir(), 'Library', 'LaunchAgents', `${APP_ID}.plist`);
 
@@ -89,6 +97,7 @@ function normalizeProfile(profile) {
     mode: normalizeMode(profile.mode),
     enabled: Boolean(profile.enabled),
     extraArgs: String(profile.extraArgs || '').trim(),
+    intervalMinutes: Math.max(0, Math.floor(Number(profile.intervalMinutes) || 0)),
   };
 }
 
@@ -522,7 +531,7 @@ async function setLaunchAgent(enabled) {
   if (process.platform !== 'darwin') {
     app.setLoginItemSettings({
       openAtLogin: enabled,
-      args: ['--run-startup-syncs'],
+      args: ['--run-scheduled'],
     });
     return;
   }
@@ -534,11 +543,13 @@ async function setLaunchAgent(enabled) {
   }
 
   const programArguments = app.isPackaged
-    ? [process.execPath, '--run-startup-syncs']
-    : [process.execPath, app.getAppPath(), '--run-startup-syncs'];
+    ? [process.execPath, '--run-scheduled']
+    : [process.execPath, app.getAppPath(), '--run-scheduled'];
 
   const argsXml = programArguments.map((arg) => `    <string>${plistEscape(arg)}</string>`).join('\n');
-  const logPath = path.join(app.getPath('userData'), 'startup-sync.log');
+  const logPath = path.join(app.getPath('userData'), 'scheduler.log');
+  // Runs at login and then every SCHEDULER_TICK_SECONDS, even when the UI is
+  // closed — the background "daemon". Each run executes only due profiles.
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -551,6 +562,8 @@ ${argsXml}
   </array>
   <key>RunAtLoad</key>
   <true/>
+  <key>StartInterval</key>
+  <integer>${SCHEDULER_TICK_SECONDS}</integer>
   <key>StandardOutPath</key>
   <string>${plistEscape(logPath)}</string>
   <key>StandardErrorPath</key>
@@ -593,6 +606,83 @@ async function runStartupSyncs() {
   await writeConfig(config);
 }
 
+function emitToWindow(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      mainWindow.webContents.send(channel, payload);
+    } catch {
+      /* window may have closed */
+    }
+  }
+}
+
+// Run every profile whose schedule is due right now. Config is re-read before
+// each write so a concurrent manual run isn't clobbered. Optionally streams
+// progress to the open window so background syncs still show in the status bar.
+async function runDueProfiles({ emitProgress = false } = {}) {
+  const snapshot = await readConfig();
+  const now = Date.now();
+  const due = snapshot.profiles.filter(
+    (profile) => isProfileDue(profile, snapshot.lastRun[profile.id], now) && !runningJobs.has(profile.id),
+  );
+  let ran = false;
+
+  for (const profile of due) {
+    ran = true;
+    const jobControl = { cancelled: false, child: null };
+    runningJobs.set(profile.id, jobControl);
+    if (emitProgress) emitToWindow('sync:progress', { id: profile.id, running: true, pct: 0 });
+    let record;
+    let bisyncOk = false;
+    try {
+      const needsResync = profile.mode === 'bisync' && !(snapshot.bisyncReady && snapshot.bisyncReady[profile.id]);
+      const runProfile = needsResync ? withExtraArg(profile, '--resync') : profile;
+      const onProgress = emitProgress
+        ? (stats) => emitToWindow('sync:progress', { id: profile.id, running: true, ...stats })
+        : undefined;
+      let result;
+      try {
+        result = await runRcloneProfile(runProfile, onProgress, jobControl);
+      } catch (error) {
+        if (profile.mode !== 'bisync' || needsResync || !needsBisyncResync(error)) throw error;
+        result = await runRcloneProfile(withExtraArg(profile, '--resync'), onProgress, jobControl);
+      }
+      record = { ok: result.code === 0, ...result };
+      bisyncOk = profile.mode === 'bisync' && result.code === 0;
+    } catch (error) {
+      record = { ok: false, finishedAt: new Date().toISOString(), output: error.message };
+    } finally {
+      runningJobs.delete(profile.id);
+      if (emitProgress) emitToWindow('sync:progress', { id: profile.id, running: false });
+    }
+    const fresh = await readConfig();
+    fresh.lastRun[profile.id] = record;
+    if (bisyncOk) fresh.bisyncReady = { ...(fresh.bisyncReady || {}), [profile.id]: true };
+    await writeConfig(fresh);
+  }
+
+  return ran;
+}
+
+// Headless daemon entry point (--run-scheduled): run due profiles, then quit.
+async function runScheduledSyncs() {
+  return runDueProfiles({ emitProgress: false });
+}
+
+// In-app ticker: while the window is open, run due profiles and refresh the UI.
+async function schedulerTick() {
+  if (schedulerTickRunning) return;
+  schedulerTickRunning = true;
+  try {
+    const ran = await runDueProfiles({ emitProgress: true });
+    if (ran) emitToWindow('state:refresh');
+  } catch {
+    /* keep the ticker alive across transient errors */
+  } finally {
+    schedulerTickRunning = false;
+  }
+}
+
 async function createWindow() {
   const win = new BrowserWindow({
     width: 1120,
@@ -607,8 +697,17 @@ async function createWindow() {
     },
   });
 
+  mainWindow = win;
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+
   if (isDev) await win.loadURL(process.env.VITE_DEV_SERVER_URL);
   else await win.loadFile(path.join(app.getAppPath(), 'dist', 'index.html'));
+
+  // Background scheduler: while the window is open, check every minute for
+  // due profiles (the macOS LaunchAgent covers the app-closed case).
+  if (!schedulerTimer) schedulerTimer = setInterval(schedulerTick, 60000);
 }
 
 ipcMain.handle('app:get-state', async () => appState());
@@ -747,6 +846,12 @@ if (process.argv.includes('--self-test')) {
     } catch (error) {
       process.stdout.write(`SELF-TEST ERROR: ${error.message}\n`);
     }
+    app.quit();
+  });
+} else if (process.argv.includes('--run-scheduled')) {
+  // Background daemon tick (LaunchAgent / login item): run due profiles, quit.
+  app.whenReady().then(async () => {
+    await runScheduledSyncs();
     app.quit();
   });
 } else if (process.argv.includes('--run-startup-syncs')) {

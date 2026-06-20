@@ -8,6 +8,8 @@ export type SyncProfile = {
   mode: SyncMode;
   enabled: boolean;
   extraArgs: string;
+  /** Background scheduler cadence in minutes. 0 = manual only. */
+  intervalMinutes: number;
 };
 
 export type RunRecord = {
@@ -113,6 +115,7 @@ declare global {
       openExternal: (url: string) => Promise<void>;
       openAbout: () => Promise<void>;
       onSyncProgress: (callback: (data: SyncProgress) => void) => () => void;
+      onStateRefresh: (callback: () => void) => () => void;
     };
   }
 }

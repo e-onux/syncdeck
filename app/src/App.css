@@ -154,7 +154,15 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-route__label { font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .sd-route__val { font-size: .82rem; color: var(--ink); word-break: break-all; line-height: 1.5; min-height: 38px; flex: 1 1 auto; }
 .sd-route__box .sl-btn { margin-top: 14px; align-self: flex-start; }
-.sd-route__arrow { display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 1.4rem; }
+.sd-route__arrow {
+  appearance: none; cursor: pointer; align-self: center;
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; color: var(--accent);
+  background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-sharp);
+  transition: color .18s, border-color .18s, background .18s, transform .18s var(--ease-out);
+}
+.sd-route__arrow:hover { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 10%, transparent); transform: rotate(180deg); }
+.sd-route__arrow:active { transform: rotate(180deg) scale(.92); }
 
 .sd-panel { background: transparent; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); padding: 16px 18px; margin-bottom: 16px; }
 .sd-panel__label { font-family: var(--ff-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; }
@@ -400,6 +408,21 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-themeswatch { width: 16px; height: 16px; border-radius: var(--r-sharp); border: 1px solid var(--line-soft); }
 .sd-themeswatch--dark { background: oklch(0.17 0.018 172); }
 .sd-themeswatch--light { background: oklch(0.975 0.006 172); }
+
+/* ---- scheduler cadence selector (profile editor) ---- */
+.sd-sched { margin-bottom: 14px; }
+.sd-sched__head { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+.sd-sched__title { font-size: .84rem; font-weight: 600; color: var(--ink); }
+.sd-sched__hint { font-size: .72rem; color: var(--ink-faint); }
+.sd-sched__opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.sd-schedbtn {
+  appearance: none; cursor: pointer; padding: 8px 13px;
+  border: 1px solid var(--line-soft); background: transparent; color: var(--ink-dim);
+  border-radius: var(--r-sharp); font-family: var(--ff-mono); font-size: .68rem;
+  letter-spacing: .04em; transition: border-color .18s, color .18s, background .18s;
+}
+.sd-schedbtn:hover { color: var(--ink); border-color: var(--line); }
+.sd-schedbtn.is-active { color: var(--ink); border-color: var(--accent); background: color-mix(in oklch, var(--accent) 12%, transparent); }
 
 /* ============================================================
    LIGHT THEME — light teal-tinted canvas, dark ink, same mint
