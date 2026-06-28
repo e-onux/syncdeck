@@ -7,6 +7,16 @@ const AdmZip = require('adm-zip');
 const root = path.resolve(__dirname, '..');
 const downloadsDir = path.join(root, '.rclone-downloads');
 
+// Pin to the version recorded in rclone.version (kept in sync by the rclone-watch
+// workflow) for reproducible bundles; fall back to "current" when absent.
+const pinnedVersion = (() => {
+  try {
+    return fs.readFileSync(path.join(root, 'rclone.version'), 'utf8').trim();
+  } catch {
+    return '';
+  }
+})();
+
 const targets = [
   { platform: 'darwin', arch: 'x64', dist: 'osx-amd64', binary: 'rclone' },
   { platform: 'darwin', arch: 'arm64', dist: 'osx-arm64', binary: 'rclone' },
@@ -47,8 +57,13 @@ async function download(url, destination) {
 }
 
 async function installTarget(target) {
-  const url = `https://downloads.rclone.org/rclone-current-${target.dist}.zip`;
-  const archivePath = path.join(downloadsDir, `rclone-current-${target.dist}.zip`);
+  const file = pinnedVersion
+    ? `rclone-v${pinnedVersion}-${target.dist}.zip`
+    : `rclone-current-${target.dist}.zip`;
+  const url = pinnedVersion
+    ? `https://downloads.rclone.org/v${pinnedVersion}/${file}`
+    : `https://downloads.rclone.org/${file}`;
+  const archivePath = path.join(downloadsDir, file);
   const destinationDir = path.join(root, 'bin', target.platform, target.arch);
   const destination = path.join(destinationDir, target.binary);
 

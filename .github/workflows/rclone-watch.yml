@@ -1,0 +1,67 @@
+name: rclone watch
+
+# Watches upstream rclone and, when a newer stable release appears, records it,
+# bumps the app patch version and pushes a tag — which triggers release.yml to
+# rebuild SyncDeck bundling the fresh engine. This is the "haber al + otomatik
+# release" half of the staleness strategy; the in-app advisory feed is the other.
+on:
+  schedule:
+    - cron: '17 6 * * *' # daily, ~06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Use RELEASE_PAT (a fine-grained PAT with contents:write) so the tag we
+      # push actually triggers release.yml. The default GITHUB_TOKEN cannot
+      # trigger further workflow runs. Without RELEASE_PAT the tag is still
+      # created, but you must run release.yml manually (workflow_dispatch).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Compare bundled rclone with upstream
+        id: cmp
+        run: |
+          set -euo pipefail
+          LATEST=$(curl -fsSL https://downloads.rclone.org/version.txt | sed 's/^rclone v//' | tr -d '[:space:]')
+          CURRENT=$(tr -d '[:space:]' < app/rclone.version 2>/dev/null || echo "")
+          echo "latest=$LATEST"   >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ] && \
+             [ "$(printf '%s\n%s\n' "$CURRENT" "$LATEST" | sort -V | tail -1)" = "$LATEST" ]; then
+            echo "newer=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "newer=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Record + tag a release
+        if: steps.cmp.outputs.newer == 'true'
+        run: |
+          set -euo pipefail
+          LATEST='${{ steps.cmp.outputs.latest }}'
+          echo "$LATEST" > app/rclone.version
+          NEWVER=$(node -e "const p=require('./app/package.json');const s=p.version.split('.');s[2]=String(+s[2]+1);console.log(s.join('.'))")
+          node -e "const fs=require('fs');const p=require('./app/package.json');p.version='$NEWVER';fs.writeFileSync('app/package.json', JSON.stringify(p,null,2)+'\n')"
+          git config user.name 'syncdeck-bot'
+          git config user.email 'syncdeck-bot@users.noreply.github.com'
+          git add app/rclone.version app/package.json
+          git commit -m "rclone $LATEST → release v$NEWVER"
+          git tag "v$NEWVER"
+          git push origin HEAD:main
+          git push origin "v$NEWVER"
+          {
+            echo "## rclone update detected"
+            echo "- upstream rclone: **$LATEST**"
+            echo "- previously bundled: ${{ steps.cmp.outputs.current }}"
+            echo "- tagged **v$NEWVER** → release.yml will rebuild SyncDeck"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Up to date
+        if: steps.cmp.outputs.newer != 'true'
+        run: echo "rclone ${{ steps.cmp.outputs.current }} is current (upstream ${{ steps.cmp.outputs.latest }})." >> "$GITHUB_STEP_SUMMARY"

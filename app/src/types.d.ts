@@ -44,6 +44,25 @@ export type BackendType = {
   options: BackendOption[];
 };
 
+export type AuthAlert = {
+  message: string;
+  detectedAt: string;
+};
+
+export type Advisory = {
+  id: string;
+  severity?: 'info' | 'warning' | 'critical';
+  providers?: string[];
+  minRcloneVersion?: string;
+  minAppVersion?: string;
+  /** Optional "learn more" link. */
+  url?: string;
+  /** Optional action hint, e.g. "update-rclone" wires the in-app updater. */
+  action?: string;
+  /** Localized message map ({ tr, en, … }) or a plain string. */
+  message: Record<string, string> | string;
+};
+
 export type AppState = {
   launchAtLogin: boolean;
   profiles: SyncProfile[];
@@ -55,6 +74,14 @@ export type AppState = {
   remotes?: string[];
   clients?: RemoteClient[];
   backendTypes?: BackendType[];
+  /** Per-remote "needs re-authorization" alerts, keyed by remote name. */
+  authAlerts?: Record<string, AuthAlert>;
+  /** Advisories that currently apply to this install. */
+  advisories?: Advisory[];
+  /** Installed rclone engine version, e.g. "1.74.3". */
+  rcloneVersion?: string | null;
+  /** SyncDeck app version. */
+  appVersion?: string;
 };
 
 export type RemoteDraft = {
@@ -79,6 +106,13 @@ export type AuthorizePayload = {
 export type TestResult = {
   ok: boolean;
   message?: string;
+};
+
+export type EngineUpdateInfo = {
+  installed: string | null;
+  latest: string | null;
+  updateAvailable: boolean;
+  managed: boolean;
 };
 
 export type AboutInfo = {
@@ -125,13 +159,21 @@ declare global {
       deleteProfile: (id: string) => Promise<AppState>;
       chooseFolder: () => Promise<string | null>;
       runSync: (id: string) => Promise<AppState>;
-      cancelSync: (id: string) => Promise<boolean>;
+      cancelSync: (id: string, force?: boolean) => Promise<boolean>;
+      windowMinimize: () => Promise<void>;
+      windowMaximize: () => Promise<boolean>;
+      windowClose: () => Promise<void>;
       setLaunchAtLogin: (enabled: boolean) => Promise<AppState>;
       createRemote: (remote: RemoteDraft) => Promise<AppState>;
       authorizeRemote: (payload: AuthorizePayload) => Promise<string>;
       testRemote: (target: string) => Promise<TestResult>;
       deleteRemote: (name: string) => Promise<AppState>;
+      reconnectRemote: (name: string) => Promise<AppState>;
       aboutRemote: (name: string) => Promise<AboutInfo>;
+      dismissAdvisory: (id: string) => Promise<AppState>;
+      checkEngineUpdate: () => Promise<EngineUpdateInfo>;
+      updateEngine: (version?: string) => Promise<AppState>;
+      resetEngine: () => Promise<AppState>;
       listRemote: (remotePath: string) => Promise<RemoteEntry[]>;
       mkdirRemote: (remotePath: string) => Promise<boolean>;
       openExternal: (url: string) => Promise<void>;
