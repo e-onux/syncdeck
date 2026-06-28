@@ -1,0 +1,4 @@
+{
+  "_doc": "SyncDeck advisory feed. See docs/advisories.md for the schema. Keep `advisories` empty until you need to warn users; the app polls this file (raw.githubusercontent.com/e-onux/syncdeck/main/advisories.json) every 6h.",
+  "advisories": []
+}

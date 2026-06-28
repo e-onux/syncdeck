@@ -1,0 +1,21 @@
+{
+  "name": "@syncdeck/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only + dry-run MCP server exposing SyncDeck/rclone to LLM agents, with a policy/allowlist layer.",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "syncdeck-mcp": "index.mjs"
+  },
+  "scripts": {
+    "start": "node index.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

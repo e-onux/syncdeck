@@ -3,8 +3,10 @@ import type { CSSProperties, ReactNode } from 'react'
 import { IonApp } from '@ionic/react'
 import type {
   AboutInfo,
+  Advisory,
   AppState,
   BackendType,
+  EngineUpdateInfo,
   RemoteClient,
   RemoteDraft,
   RemoteEntry,
@@ -72,20 +74,86 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
     { id: 'webdav', name: 'webdav', description: 'WebDAV', options: [] },
     { id: 'crypt', name: 'crypt', description: 'Encrypt/Decrypt a remote', options: [] },
   ],
+  // Sample expired-auth alert so the re-authorize flow is visible in the demo.
+  authAlerts: { isdrive: { message: 'oauth2: cannot fetch token: 401 Unauthorized', detectedAt: new Date().toISOString() } },
+  rcloneVersion: '1.73.0',
+  appVersion: '0.2.5',
+  // Sample advisory so the kill-switch banner is visible in the demo.
+  advisories: [
+    {
+      id: 'onedrive-2026-06',
+      severity: 'warning',
+      providers: ['drive'],
+      minRcloneVersion: '1.74.3',
+      action: 'update-rclone',
+      message: {
+        tr: 'Microsoft OneDrive hizmet güncellemesi nedeniyle entegrasyonlarımız bu sürümde iş görememektedir. Lütfen sürümünüzü güncelleyin.',
+        en: 'Due to a Microsoft OneDrive service update our integration no longer works in this version. Please update.',
+      },
+    },
+  ],
   ...overrides,
 })
+
+// Browser-demo only: a fake progress stream so the live log, transfer bars and
+// stop flow are demonstrable without a real rclone (the Electron app streams the
+// real thing). Harmless in production — window.rcloneSyncer wins over demoApi.
+let demoProgressCb: ((data: SyncProgress) => void) | null = null
+let demoCancelled = false
+function demoSimulate(id: string) {
+  if (!demoProgressCb) return
+  demoCancelled = false
+  const files: Array<{ name: string; direction: TransferEvent['direction'] }> = [
+    { name: 'Belgeler/rapor-2026.pdf', direction: 'download' },
+    { name: 'Belgeler/sunum.pptx', direction: 'download' },
+    { name: 'foto/IMG_0421.jpg', direction: 'upload' },
+    { name: 'foto/IMG_0422.jpg', direction: 'upload' },
+    { name: 'arsiv/eski-yedek.zip', direction: 'download' },
+    { name: 'notlar.txt', direction: 'upload' },
+  ]
+  let idx = 0
+  let filePct = 0
+  const tick = () => {
+    if (!demoProgressCb || demoCancelled || idx >= files.length) {
+      demoProgressCb?.({ id, running: false, pct: 100 })
+      return
+    }
+    const f = files[idx]
+    filePct = Math.min(100, filePct + 28 + Math.random() * 22)
+    const totalPct = Math.min(100, Math.round(((idx + filePct / 100) / files.length) * 100))
+    const event: TransferEvent = { id: `${f.direction}:${f.name}`, name: f.name, direction: f.direction, pct: Math.round(filePct), status: 'active' }
+    if (filePct >= 100) {
+      event.status = 'done'
+      event.pct = 100
+      idx += 1
+      filePct = 0
+    }
+    demoProgressCb({
+      id, running: true, pct: totalPct,
+      transferred: `${Math.round(totalPct * 4.8)} MiB`, total: '482 MiB',
+      speed: `${(6 + Math.random() * 3).toFixed(1)} MiB/s`,
+      eta: `00:${String(Math.max(0, 12 - Math.round(totalPct / 9))).padStart(2, '0')}`,
+      files: idx, totalFiles: files.length, errors: 0, transferEvents: [event],
+    })
+    setTimeout(tick, 430)
+  }
+  tick()
+}
 
 const demoApi: Window['rcloneSyncer'] = {
   getState: async () => demoState(),
   saveProfile: async (profile) => demoState({ profiles: [profile] }),
   deleteProfile: async () => demoState({ profiles: [] }),
   chooseFolder: async () => '/Users/emir/Documents',
-  runSync: async (id) =>
-    demoState({
+  runSync: async (id) => {
+    demoSimulate(id)
+    await new Promise((resolve) => setTimeout(resolve, 3400))
+    return demoState({
       lastRun: {
         [id]: { ok: true, code: 0, finishedAt: new Date().toISOString(), output: 'Transferred: 482 MiB / 482 MiB, 100%\n✓ Tamamlandı · 38 dosya, 0 hata' },
       },
-    }),
+    })
+  },
   setLaunchAtLogin: async (enabled) => demoState({ launchAtLogin: enabled }),
   createRemote: async (remote) =>
     demoState({
@@ -97,10 +165,21 @@ const demoApi: Window['rcloneSyncer'] = {
         { name: 'b2cold:', type: 'b2' },
       ],
     }),
-  cancelSync: async () => true,
+  cancelSync: async () => {
+    demoCancelled = true
+    return true
+  },
+  windowMinimize: async () => undefined,
+  windowMaximize: async () => false,
+  windowClose: async () => undefined,
   authorizeRemote: async () => '{"access_token":"demo","token_type":"Bearer","expiry":"2030-01-01T00:00:00Z"}',
   testRemote: async () => ({ ok: true }),
   deleteRemote: async () => demoState({ remotes: ['isdrive:', 'arsiv:'], clients: [{ name: 'isdrive:', type: 'drive' }, { name: 'arsiv:', type: 's3' }] }),
+  reconnectRemote: async () => demoState({ authAlerts: {} }),
+  dismissAdvisory: async () => demoState({ advisories: [] }),
+  checkEngineUpdate: async () => ({ installed: '1.73.0', latest: '1.74.3', updateAvailable: true, managed: false }),
+  updateEngine: async () => demoState({ rcloneVersion: '1.74.3', advisories: [] }),
+  resetEngine: async () => demoState(),
   aboutRemote: async () => ({ supported: true, total: '5 TiB', used: '2.9 TiB', free: '2.1 TiB' }),
   mkdirRemote: async () => true,
   listRemote: async () => [
@@ -111,7 +190,12 @@ const demoApi: Window['rcloneSyncer'] = {
   ],
   openExternal: async () => undefined,
   openAbout: async () => undefined,
-  onSyncProgress: () => () => undefined,
+  onSyncProgress: (cb) => {
+    demoProgressCb = cb
+    return () => {
+      if (demoProgressCb === cb) demoProgressCb = null
+    }
+  },
   onStateRefresh: () => () => undefined,
 }
 
@@ -264,6 +348,18 @@ const tr = {
   wizAuthorizing: 'Yetkilendiriliyor…',
   wizAuthorized: 'Yetkilendirildi',
   wizReauthorize: 'Yeniden yetkilendir',
+  authNeedsReauth: 'Yetki süresi doldu',
+  engineLabel: 'Senkron motoru',
+  engineCheck: 'Güncellemeleri denetle',
+  engineUpdate: 'Motoru güncelle',
+  engineUpToDate: 'En güncel sürüm',
+  engineUpdating: 'Güncelleniyor…',
+  stopping: 'Durduruluyor…',
+  forceStop: 'Zorla durdur',
+  winMinimize: 'Küçült',
+  winMaximize: 'Büyüt',
+  winClose: 'Kapat',
+  authReauthBody: (names: string) => `${names} için oturum süresi doldu. Senkronizasyonun sürmesi için yeniden yetkilendir.`,
   wizOauthNote: 'Tarayıcıda yetkilendir; SyncDeck erişim jetonunu yerel motor yapılandırmanda güvenle saklar.',
   wizTest: 'Bağlantıyı test et',
   wizTesting: 'Test ediliyor…',
@@ -401,6 +497,18 @@ const en: Copy = {
   wizAuthorizing: 'Authorizing…',
   wizAuthorized: 'Authorized',
   wizReauthorize: 'Re-authorize',
+  authNeedsReauth: 'Authorization expired',
+  engineLabel: 'Sync engine',
+  engineCheck: 'Check for updates',
+  engineUpdate: 'Update engine',
+  engineUpToDate: 'Up to date',
+  engineUpdating: 'Updating…',
+  stopping: 'Stopping…',
+  forceStop: 'Force stop',
+  winMinimize: 'Minimize',
+  winMaximize: 'Maximize',
+  winClose: 'Close',
+  authReauthBody: (names) => `Authorization for ${names} expired. Re-authorize to keep syncing.`,
   wizOauthNote: 'Authorize in your browser; SyncDeck stores the access token securely in your local engine config.',
   wizTest: 'Test connection',
   wizTesting: 'Testing…',
@@ -537,6 +645,18 @@ const de: Copy = {
   wizAuthorizing: 'Autorisiert…',
   wizAuthorized: 'Autorisiert',
   wizReauthorize: 'Erneut autorisieren',
+  authNeedsReauth: 'Autorisierung abgelaufen',
+  engineLabel: 'Sync-Engine',
+  engineCheck: 'Nach Updates suchen',
+  engineUpdate: 'Engine aktualisieren',
+  engineUpToDate: 'Aktuell',
+  engineUpdating: 'Wird aktualisiert…',
+  stopping: 'Wird gestoppt…',
+  forceStop: 'Erzwingen',
+  winMinimize: 'Minimieren',
+  winMaximize: 'Maximieren',
+  winClose: 'Schließen',
+  authReauthBody: (names) => `Die Autorisierung für ${names} ist abgelaufen. Autorisiere erneut, um die Synchronisierung fortzusetzen.`,
   wizOauthNote: 'Autorisiere im Browser; SyncDeck speichert das Zugriffstoken sicher in deiner lokalen Engine-Konfiguration.',
   wizTest: 'Verbindung testen',
   wizTesting: 'Testet…',
@@ -673,6 +793,18 @@ const es: Copy = {
   wizAuthorizing: 'Autorizando…',
   wizAuthorized: 'Autorizado',
   wizReauthorize: 'Volver a autorizar',
+  authNeedsReauth: 'Autorización caducada',
+  engineLabel: 'Motor de sincronización',
+  engineCheck: 'Buscar actualizaciones',
+  engineUpdate: 'Actualizar motor',
+  engineUpToDate: 'Actualizado',
+  engineUpdating: 'Actualizando…',
+  stopping: 'Deteniendo…',
+  forceStop: 'Forzar parada',
+  winMinimize: 'Minimizar',
+  winMaximize: 'Maximizar',
+  winClose: 'Cerrar',
+  authReauthBody: (names) => `La autorización de ${names} ha caducado. Vuelve a autorizar para seguir sincronizando.`,
   wizOauthNote: 'Autoriza en tu navegador; SyncDeck guarda el token de acceso de forma segura en tu configuración local del motor.',
   wizTest: 'Probar conexión',
   wizTesting: 'Probando…',
@@ -809,6 +941,18 @@ const zh: Copy = {
   wizAuthorizing: '正在授权…',
   wizAuthorized: '已授权',
   wizReauthorize: '重新授权',
+  authNeedsReauth: '授权已过期',
+  engineLabel: '同步引擎',
+  engineCheck: '检查更新',
+  engineUpdate: '更新引擎',
+  engineUpToDate: '已是最新',
+  engineUpdating: '正在更新…',
+  stopping: '正在停止…',
+  forceStop: '强制停止',
+  winMinimize: '最小化',
+  winMaximize: '最大化',
+  winClose: '关闭',
+  authReauthBody: (names) => `${names} 的授权已过期。请重新授权以继续同步。`,
   wizOauthNote: '在浏览器中授权；SyncDeck 会把访问令牌安全地保存在本地引擎配置中。',
   wizTest: '测试连接',
   wizTesting: '正在测试…',
@@ -945,6 +1089,18 @@ const ja: Copy = {
   wizAuthorizing: '認可中…',
   wizAuthorized: '認可済み',
   wizReauthorize: '再認可',
+  authNeedsReauth: '認可の期限切れ',
+  engineLabel: '同期エンジン',
+  engineCheck: '更新を確認',
+  engineUpdate: 'エンジンを更新',
+  engineUpToDate: '最新です',
+  engineUpdating: '更新中…',
+  stopping: '停止中…',
+  forceStop: '強制停止',
+  winMinimize: '最小化',
+  winMaximize: '最大化',
+  winClose: '閉じる',
+  authReauthBody: (names) => `${names} の認可が期限切れです。同期を続けるには再認可してください。`,
   wizOauthNote: 'ブラウザで認可してください。SyncDeck はアクセストークンをローカルのエンジン設定に安全に保存します。',
   wizTest: '接続をテスト',
   wizTesting: 'テスト中…',
@@ -1081,6 +1237,18 @@ const ru: Copy = {
   wizAuthorizing: 'Авторизация…',
   wizAuthorized: 'Авторизовано',
   wizReauthorize: 'Авторизовать снова',
+  authNeedsReauth: 'Срок авторизации истёк',
+  engineLabel: 'Движок синхронизации',
+  engineCheck: 'Проверить обновления',
+  engineUpdate: 'Обновить движок',
+  engineUpToDate: 'Актуальная версия',
+  engineUpdating: 'Обновление…',
+  stopping: 'Остановка…',
+  forceStop: 'Принудительно',
+  winMinimize: 'Свернуть',
+  winMaximize: 'Развернуть',
+  winClose: 'Закрыть',
+  authReauthBody: (names) => `Срок авторизации для ${names} истёк. Авторизуйтесь снова, чтобы продолжить синхронизацию.`,
   wizOauthNote: 'Авторизуйтесь в браузере; SyncDeck безопасно сохранит токен доступа в локальной конфигурации движка.',
   wizTest: 'Проверить подключение',
   wizTesting: 'Проверка…',
@@ -1217,6 +1385,18 @@ const nl: Copy = {
   wizAuthorizing: 'Autoriseren…',
   wizAuthorized: 'Geautoriseerd',
   wizReauthorize: 'Opnieuw autoriseren',
+  authNeedsReauth: 'Autorisatie verlopen',
+  engineLabel: 'Sync-engine',
+  engineCheck: 'Controleer op updates',
+  engineUpdate: 'Engine bijwerken',
+  engineUpToDate: 'Up-to-date',
+  engineUpdating: 'Bijwerken…',
+  stopping: 'Stoppen…',
+  forceStop: 'Geforceerd stoppen',
+  winMinimize: 'Minimaliseren',
+  winMaximize: 'Maximaliseren',
+  winClose: 'Sluiten',
+  authReauthBody: (names) => `De autorisatie voor ${names} is verlopen. Autoriseer opnieuw om te blijven synchroniseren.`,
   wizOauthNote: 'Autoriseer in je browser; SyncDeck slaat het toegangstoken veilig op in je lokale engineconfiguratie.',
   wizTest: 'Verbinding testen',
   wizTesting: 'Testen…',
@@ -1353,6 +1533,18 @@ const ar: Copy = {
   wizAuthorizing: 'جار التفويض…',
   wizAuthorized: 'تم التفويض',
   wizReauthorize: 'إعادة التفويض',
+  authNeedsReauth: 'انتهت صلاحية التفويض',
+  engineLabel: 'محرك المزامنة',
+  engineCheck: 'التحقق من التحديثات',
+  engineUpdate: 'تحديث المحرك',
+  engineUpToDate: 'محدّث',
+  engineUpdating: 'جارٍ التحديث…',
+  stopping: 'جارٍ الإيقاف…',
+  forceStop: 'إيقاف قسري',
+  winMinimize: 'تصغير',
+  winMaximize: 'تكبير',
+  winClose: 'إغلاق',
+  authReauthBody: (names) => `انتهت صلاحية التفويض لـ ${names}. أعد التفويض لمتابعة المزامنة.`,
   wizOauthNote: 'قم بالتفويض في المتصفح؛ يحفظ SyncDeck رمز الوصول بأمان في إعدادات المحرك المحلية.',
   wizTest: 'اختبار الاتصال',
   wizTesting: 'جار الاختبار…',
@@ -1548,6 +1740,8 @@ const ServerIcon = (p: { size?: number }) => <Glyph size={p.size ?? 16}><path d=
 const InfoIcon = () => <Glyph size={16}><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></Glyph>
 const TrashIcon = () => <Glyph size={15}><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></Glyph>
 const SwapIcon = () => <Glyph size={18}><path d="M7 4 3 8l4 4" /><path d="M3 8h13" /><path d="M17 20l4-4-4-4" /><path d="M21 16H8" /></Glyph>
+const WarnIcon = (p: { size?: number }) => <Glyph size={p.size ?? 18}><path d="M10.3 3.2 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></Glyph>
+const RefreshIcon = (p: { size?: number }) => <Glyph size={p.size ?? 15}><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 4V9h-5" /></Glyph>
 
 const ProviderGlyph = ({ id, size = 18 }: { id: string; size?: number }) => {
   const iconUrl = PROVIDER_ICON_URLS[`./assets/provider-icons/${id}.svg`]
@@ -1606,6 +1800,7 @@ const newProfile = (): SyncProfile => ({
 })
 
 const TRANSFER_BAR_LIMIT = 34
+const LIVE_LOG_LIMIT = 200
 
 const SCHEDULE_PRESETS = [
   { minutes: 0, key: 'schedManual' },
@@ -1625,6 +1820,9 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<SyncProgress | null>(null)
   const [transferBars, setTransferBars] = useState<TransferEvent[]>([])
+  const [stopping, setStopping] = useState(false)
+  const [liveLog, setLiveLog] = useState<Array<{ key: string; name: string; status: TransferEvent['status']; direction: TransferEvent['direction'] }>>([])
+  const logStreamRef = useRef<HTMLDivElement>(null)
 
   const [accentName, setAccentName] = useState<AccentName>(() => (localStorage.getItem('sd_accent') as AccentName) || 'Mint')
   const [language, setLanguage] = useState<Language>(() => (localStorage.getItem('sd_lang') as Language) || 'tr')
@@ -1634,6 +1832,9 @@ function App() {
   const [settingsTab, setSettingsTab] = useState<'interface' | 'clients' | 'about'>('interface')
   const [clientTests, setClientTests] = useState<Record<string, { state: 'idle' | 'busy' | 'ok' | 'fail'; msg?: string }>>({})
   const [clientAbout, setClientAbout] = useState<Record<string, AboutInfo>>({})
+  const [engineInfo, setEngineInfo] = useState<EngineUpdateInfo | null>(null)
+  const [engineBusy, setEngineBusy] = useState(false)
+  const [engineError, setEngineError] = useState<string | null>(null)
 
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizStep, setWizStep] = useState(1)
@@ -1673,6 +1874,17 @@ function App() {
     const source = state?.clients?.length ? state.clients : r.map((name) => ({ name, type: '' }))
     return Array.from(new Map(source.map((client) => [client.name, client])).values())
   }, [state])
+  // Remotes flagged by the engine as having an expired/revoked token. Keys are
+  // bare remote names ("gdrive"); client.name carries a trailing colon.
+  const authAlerts = state?.authAlerts ?? {}
+  const reauthClients = clients.filter((c) => authAlerts[c.name.replace(/:$/, '')])
+  // Server-driven advisories (kill-switch). Message is a localized map; fall back
+  // through the active language → English → whatever's present.
+  const advisories = state?.advisories ?? []
+  const advisoryText = (adv: Advisory) =>
+    typeof adv.message === 'string'
+      ? adv.message
+      : adv.message[language] || adv.message.en || Object.values(adv.message)[0] || ''
   const selectedRun = selectedId && state ? state.lastRun[selectedId] : null
   const canSave = Boolean(draft.name.trim() && draft.source.trim() && draft.destination.trim())
   const running = busy === 'run' || Boolean(progress?.running)
@@ -1736,11 +1948,31 @@ function App() {
           }
           return next.slice(-TRANSFER_BAR_LIMIT)
         })
+        // Stream completed/failed/removed files into the live log (one line each).
+        setLiveLog((current) => {
+          const next = [...current]
+          for (const event of data.transferEvents || []) {
+            if (event.status === 'active') continue
+            const key = `${event.id}:${event.status}`
+            if (next.some((line) => line.key === key)) continue
+            next.push({ key, name: event.name, status: event.status, direction: event.direction })
+          }
+          return next.slice(-LIVE_LOG_LIMIT)
+        })
       }
-      if (!data.running) window.setTimeout(() => setProgress((cur) => (cur && !cur.running ? null : cur)), 4000)
+      if (!data.running) {
+        setStopping(false)
+        window.setTimeout(() => setProgress((cur) => (cur && !cur.running ? null : cur)), 4000)
+      }
     })
     return unsub
   }, [])
+
+  // Keep the live log scrolled to the newest line as files stream in.
+  useEffect(() => {
+    const el = logStreamRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [liveLog])
 
   // The background scheduler refreshes app state (lastRun/log) after a run.
   useEffect(() => {
@@ -1834,10 +2066,16 @@ function App() {
   const runOrStop = () => {
     if (!selectedId) return
     if (running) {
-      api.cancelSync(selectedId).catch(() => undefined)
+      // First press: graceful stop (rclone finishes the current file → "Durduruluyor…").
+      // Second press while stopping: force kill (SIGKILL) for emergencies.
+      const force = stopping
+      setStopping(true)
+      api.cancelSync(selectedId, force).catch(() => undefined)
       return
     }
     setTransferBars([])
+    setLiveLog([])
+    setStopping(false)
     withBusy('run', async () => {
       setState(await api.runSync(selectedId))
     })
@@ -2040,6 +2278,51 @@ function App() {
       })
     })
   }
+  // Re-run the OAuth flow for an expired client (`rclone config reconnect`),
+  // then refresh state so the auth alert clears.
+  const reconnectClient = (name: string) =>
+    withBusy(`reconnect:${name}`, async () => {
+      setState(await api.reconnectRemote(name))
+      setClientTests((m) => {
+        const next = { ...m }
+        delete next[name]
+        return next
+      })
+    })
+  const dismissAdvisory = (id: string) =>
+    withBusy(`advisory:${id}`, async () => {
+      setState(await api.dismissAdvisory(id))
+    })
+  const checkEngine = async () => {
+    setEngineBusy(true)
+    setEngineError(null)
+    try {
+      setEngineInfo(await api.checkEngineUpdate())
+    } catch (err) {
+      setEngineError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setEngineBusy(false)
+    }
+  }
+  // Self-update the rclone engine. main.cjs downloads+verifies, ad-hoc signs, and
+  // runs the compatibility smoke test before promoting; a failure rejects here.
+  const updateEngine = async (version?: string) => {
+    setEngineBusy(true)
+    setEngineError(null)
+    try {
+      setState(await api.updateEngine(version))
+      setEngineInfo(await api.checkEngineUpdate())
+    } catch (err) {
+      setEngineError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setEngineBusy(false)
+    }
+  }
+  // Check the engine version once when the About tab opens.
+  useEffect(() => {
+    if (settingsOpen && settingsTab === 'about' && !engineInfo && !engineBusy) checkEngine()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsOpen, settingsTab])
 
   /* ---- engine unavailable guard ---- */
   if (!state) {
@@ -2083,7 +2366,11 @@ function App() {
 
         {/* ============ TITLE BAR ============ */}
         <header className="sd-titlebar">
-          <div className="sd-traffic" aria-hidden="true"><span /><span /><span className="is-accent" /></div>
+          <div className="sd-traffic">
+            <button className="sd-traffic__dot is-close" onClick={() => api.windowClose()} aria-label={t.winClose} title={t.winClose} />
+            <button className="sd-traffic__dot is-min" onClick={() => api.windowMinimize()} aria-label={t.winMinimize} title={t.winMinimize} />
+            <button className="sd-traffic__dot is-max" onClick={() => api.windowMaximize()} aria-label={t.winMaximize} title={t.winMaximize} />
+          </div>
           <div className="sd-brand"><Logo /><span className="sd-brand__name">SYNCDECK</span></div>
           <div className="sd-titlebar__right">
             <span className="sd-conn"><span className={`sd-dot sd-dot--pulse${running ? '' : ' is-idle'}`} />{running ? t.connBusy : t.connIdle}</span>
@@ -2133,6 +2420,33 @@ function App() {
                 </div>
               )}
 
+              {advisories.map((adv) => (
+                <div key={adv.id} className={`sd-advisory sd-advisory--${adv.severity || 'warning'}`} role="alert">
+                  <span className="sd-advisory__ico"><WarnIcon size={20} /></span>
+                  <div className="sd-advisory__text">{advisoryText(adv)}</div>
+                  {adv.action === 'update-rclone' && (
+                    <button className="sl-btn sl-btn--sm" disabled={engineBusy} onClick={() => updateEngine()}>
+                      {engineBusy ? t.engineUpdating : t.engineUpdate}
+                    </button>
+                  )}
+                  {adv.url && (
+                    <button className="sd-advisory__link" onClick={() => adv.url && openExternal(adv.url)} title="↗" aria-label="↗">↗</button>
+                  )}
+                  <button className="sd-advisory__close" disabled={busy === `advisory:${adv.id}`} onClick={() => dismissAdvisory(adv.id)} aria-label="Kapat">✕</button>
+                </div>
+              ))}
+
+              {reauthClients.length > 0 && (
+                <div className="sd-authalert" role="alert">
+                  <span className="sd-authalert__ico"><WarnIcon size={20} /></span>
+                  <div className="sd-authalert__text">
+                    <strong>{t.authNeedsReauth}</strong>
+                    <span>{t.authReauthBody(reauthClients.map((c) => clientLabel(c.name)).join(', '))}</span>
+                  </div>
+                  <button className="sl-btn sl-btn--sm" onClick={() => openSettings('clients')}>{t.wizReauthorize}</button>
+                </div>
+              )}
+
               <div className="sd-editor-head">
                 <div>
                   <div className="sd-kicker">{t.activeKicker}</div>
@@ -2146,7 +2460,7 @@ function App() {
                   />
                 </div>
                 <div className="sd-editor-actions">
-                  <button className="sl-btn sl-btn--ghost sl-btn--sm" disabled={!selectedId} onClick={runOrStop}>{running ? t.stop : t.run}</button>
+                  <button className={`sl-btn sl-btn--ghost sl-btn--sm${stopping ? ' sl-btn--force' : ''}`} disabled={!selectedId} onClick={runOrStop}>{stopping ? t.forceStop : running ? t.stop : t.run}</button>
                   <button className="sl-btn sl-btn--sm" disabled={!canSave || busy === 'save'} onClick={saveProfile}>{t.save}</button>
                 </div>
               </div>
@@ -2266,10 +2580,24 @@ function App() {
               <div className="sd-log">
                 <div className="sd-log__head">
                   <span className={`sd-dot${running ? '' : ' is-idle'}`} />
-                  <span className="sd-log__title">{t.liveLog}</span>
-                  {selectedRun?.finishedAt && <span className="sd-log__time">{new Date(selectedRun.finishedAt).toLocaleTimeString()}</span>}
+                  <span className="sd-log__title">{stopping ? t.stopping : t.liveLog}</span>
+                  {running && liveLog.length > 0 && <span className="sd-log__count">{liveLog.length}</span>}
+                  {!running && selectedRun?.finishedAt && <span className="sd-log__time">{new Date(selectedRun.finishedAt).toLocaleTimeString()}</span>}
                 </div>
-                <pre className="sd-log__pre">{logText}</pre>
+                {running && liveLog.length > 0 ? (
+                  <div className="sd-log__stream" ref={logStreamRef}>
+                    {liveLog.map((line) => (
+                      <div key={line.key} className={`sd-logline is-${line.status} is-${line.direction}`}>
+                        <span className="sd-logline__mark">
+                          {line.status === 'done' ? (line.direction === 'download' ? '↓' : line.direction === 'upload' ? '↑' : '✓') : line.status === 'error' ? '✗' : '⌫'}
+                        </span>
+                        <span className="sd-logline__name">{line.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <pre className="sd-log__pre">{logText}</pre>
+                )}
               </div>
 
               <div className="sd-delete">
@@ -2280,7 +2608,7 @@ function App() {
         </div>
 
         {/* ============ STATUS BAR ============ */}
-        <StatusBar t={t} accent={accent} running={running} progress={progress} transferBars={transferBars} />
+        <StatusBar t={t} accent={accent} running={running} stopping={stopping} progress={progress} transferBars={transferBars} />
 
         {/* ============ SETTINGS ============ */}
         {settingsOpen && (
@@ -2360,26 +2688,37 @@ function App() {
                           {clients.map((c) => {
                             const test = clientTests[c.name]
                             const about = clientAbout[c.name]
-                            const statusState = test && test.state !== 'idle' ? test.state : 'connected'
+                            const alert = authAlerts[c.name.replace(/:$/, '')]
+                            const reauthBusy = busy === `reconnect:${c.name}`
+                            const testState = test && test.state !== 'idle' ? test.state : 'connected'
+                            // An expired token outranks a stale connection check.
+                            const statusState = reauthBusy ? 'busy' : alert ? 'warn' : testState
                             const statusLabel =
-                              statusState === 'busy' ? t.wizTesting
-                                : statusState === 'ok' ? t.wizTestOk
-                                  : statusState === 'fail' ? t.wizTestFail
-                                    : t.connected
+                              reauthBusy ? t.wizAuthorizing
+                                : alert ? t.authNeedsReauth
+                                  : testState === 'busy' ? t.wizTesting
+                                    : testState === 'ok' ? t.wizTestOk
+                                      : testState === 'fail' ? t.wizTestFail
+                                        : t.connected
                             return (
-                              <div key={c.name} className="sd-clientrow">
+                              <div key={c.name} className={`sd-clientrow${alert ? ' is-warn' : ''}`}>
                                 <span className="sd-clientrow__icon"><ProviderGlyph id={c.type} size={22} /></span>
                                 <div className="sd-clientrow__text">
                                   <div className="sd-clientrow__name">{clientLabel(c.name)}</div>
                                   <div className="sd-clientrow__type">{c.type || '—'} · {c.name}</div>
-                                  {about?.supported && about.free && (
+                                  {about?.supported && about.free && !alert && (
                                     <div className="sd-clientrow__quota">{about.free} {t.quotaFree}{about.total ? ` / ${about.total}` : ''}</div>
                                   )}
                                 </div>
-                                <span className={`sd-clientrow__status is-${statusState}`} title={test?.msg}>
+                                <span className={`sd-clientrow__status is-${statusState}`} title={alert ? alert.message : test?.msg}>
                                   <span className="sd-dot" />{statusLabel}
                                 </span>
                                 <div className="sd-clientrow__actions">
+                                  {alert && (
+                                    <button className="sd-rowbtn sd-rowbtn--warn" disabled={reauthBusy} onClick={() => reconnectClient(c.name)}>
+                                      <RefreshIcon /> {t.wizReauthorize}
+                                    </button>
+                                  )}
                                   <button className="sd-rowbtn" disabled={test?.state === 'busy'} onClick={() => testClient(c.name)}>{t.testClient}</button>
                                   <button className="sd-rowbtn sd-rowbtn--danger" disabled={busy === `client:${c.name}`} onClick={() => deleteClient(c.name)} aria-label={t.deleteClientLabel} title={t.deleteClientLabel}>
                                     <TrashIcon />
@@ -2398,12 +2737,32 @@ function App() {
                         <Logo w={44} h={40} />
                         <div>
                           <div className="sd-about__name">SyncDeck</div>
-                          <div className="sd-about__ver">{t.version(VERSION)}</div>
+                          <div className="sd-about__ver">{t.version(state?.appVersion || VERSION)}</div>
                         </div>
                       </div>
                       <div className="sl-card sd-about__card">
                         <div className="sd-about__cardlabel">{t.aboutTitle}</div>
                         <p className="sd-about__body">{t.aboutBody}</p>
+                      </div>
+                      <div className="sl-card sd-about__card">
+                        <div className="sd-about__cardlabel">{t.engineLabel}</div>
+                        <div className="sd-engine-row">
+                          <div className="sd-engine-ver">rclone {state?.rcloneVersion || '—'}</div>
+                          <div className="sd-engine-actions">
+                            {engineBusy ? (
+                              <span className="sd-engine-status">{t.engineUpdating}</span>
+                            ) : engineInfo?.updateAvailable ? (
+                              <button className="sl-btn sl-btn--sm" onClick={() => updateEngine(engineInfo.latest || undefined)}>
+                                {t.engineUpdate} → {engineInfo.latest}
+                              </button>
+                            ) : engineInfo ? (
+                              <span className="sd-engine-status is-ok"><span className="sd-dot" />{t.engineUpToDate}</span>
+                            ) : (
+                              <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={checkEngine}>{t.engineCheck}</button>
+                            )}
+                          </div>
+                        </div>
+                        {engineError && <div className="sd-engine-err">{engineError}</div>}
                       </div>
                       <div className="sd-about__links">
                         <button className="sl-btn sl-btn--ghost sl-btn--sm" onClick={() => openExternal('https://rclone.org')}>rclone.org</button>
@@ -2594,12 +2953,14 @@ function StatusBar({
   t,
   accent,
   running,
+  stopping,
   progress,
   transferBars,
 }: {
   t: Copy;
   accent: string;
   running: boolean;
+  stopping: boolean;
   progress: SyncProgress | null;
   transferBars: TransferEvent[];
 }) {
@@ -2614,7 +2975,7 @@ function StatusBar({
     <footer className="sd-status">
       <div className="sd-status__seg">
         <span className={`sd-dot sd-dot--pulse${running ? '' : ' is-idle'}`} style={{ boxShadow: `0 0 0 3px color-mix(in oklch, ${running ? accent : 'var(--ink-faint)'} 22%, transparent)` }} />
-        <div><div className="sd-status__cap">{t.statusTitle}</div><div className="sd-status__val">{running ? t.syncing : t.idle}</div></div>
+        <div><div className="sd-status__cap">{t.statusTitle}</div><div className="sd-status__val">{stopping ? t.stopping : running ? t.syncing : t.idle}</div></div>
       </div>
       <div className="sd-status__seg sd-status__eq-seg">
         <div className="sd-eq" aria-label="Dosya aktarım göstergesi">
