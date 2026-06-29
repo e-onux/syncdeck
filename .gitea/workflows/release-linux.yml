@@ -1,0 +1,103 @@
+name: Release Linux
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  GH_REPO: e-onux/syncdeck
+
+jobs:
+  build-and-publish:
+    name: Build Linux and publish to GitHub
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run bundle:linux
+        env:
+          RCLONE_TARGETS: linux-x64,linux-arm64
+
+      - name: Publish assets to GitHub release
+        env:
+          GITHUB_RELEASE_TOKEN: ${{ secrets.GITHUB_RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GITHUB_RELEASE_TOKEN:-}" ]; then
+            echo "GITHUB_RELEASE_TOKEN secret is required."
+            exit 1
+          fi
+
+          TAG="${GITHUB_REF_NAME:-${GITHUB_REF##*/}}"
+          API="https://api.github.com/repos/${GH_REPO}"
+          AUTH_HEADER="Authorization: Bearer ${GITHUB_RELEASE_TOKEN}"
+
+          release_json="$(mktemp)"
+          http_code="$(curl -fsS -o "$release_json" -w '%{http_code}' \
+            -H "$AUTH_HEADER" \
+            -H 'Accept: application/vnd.github+json' \
+            "${API}/releases/tags/${TAG}" || true)"
+
+          if [ "$http_code" = "404" ]; then
+            jq -n --arg tag "$TAG" --arg name "$TAG" '{
+              tag_name: $tag,
+              name: $name,
+              generate_release_notes: true,
+              body: "## First launch\n\nSyncDeck bundles rclone, so no separate rclone install is required.\n\n**Linux** - make the AppImage executable with `chmod +x SyncDeck-*.AppImage`, or install the `.deb` package."
+            }' > /tmp/github-release-body.json
+            curl -fsS -o "$release_json" \
+              -H "$AUTH_HEADER" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'Content-Type: application/json' \
+              -d @/tmp/github-release-body.json \
+              "${API}/releases"
+          elif [ "$http_code" != "200" ]; then
+            echo "GitHub release lookup failed with HTTP ${http_code}."
+            cat "$release_json"
+            exit 1
+          fi
+
+          release_id="$(jq -r '.id' "$release_json")"
+          if [ -z "$release_id" ] || [ "$release_id" = "null" ]; then
+            echo "Could not determine GitHub release id."
+            cat "$release_json"
+            exit 1
+          fi
+
+          assets_json="$(mktemp)"
+          curl -fsS -o "$assets_json" \
+            -H "$AUTH_HEADER" \
+            -H 'Accept: application/vnd.github+json' \
+            "${API}/releases/${release_id}/assets"
+
+          shopt -s nullglob
+          for asset in release/*.AppImage release/*.deb release/latest*.yml; do
+            name="$(basename "$asset")"
+            existing_id="$(jq -r --arg name "$name" '.[] | select(.name == $name) | .id' "$assets_json" | head -n 1)"
+            if [ -n "$existing_id" ]; then
+              curl -fsS -X DELETE \
+                -H "$AUTH_HEADER" \
+                -H 'Accept: application/vnd.github+json' \
+                "${API}/releases/assets/${existing_id}"
+            fi
+            curl -fsS \
+              -H "$AUTH_HEADER" \
+              -H 'Accept: application/vnd.github+json' \
+              -H 'Content-Type: application/octet-stream' \
+              --data-binary @"$asset" \
+              "https://uploads.github.com/repos/${GH_REPO}/releases/${release_id}/assets?name=${name}"
+          done
