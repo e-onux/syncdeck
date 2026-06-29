@@ -28,7 +28,7 @@ import {
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.2.5'
+const VERSION = '0.3.0'
 const PROVIDER_ICON_URLS = import.meta.glob('./assets/provider-icons/*.svg', {
   eager: true,
   query: '?url',
