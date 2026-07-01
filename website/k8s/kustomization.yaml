@@ -19,4 +19,4 @@ resources:
 # per release and re-import.
 images:
   - name: syncdeck-web
-    newTag: "1"
+    newTag: "2"
