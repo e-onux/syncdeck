@@ -1,0 +1,177 @@
+name: rclone mobile engine
+
+# Builds the rclone engine as a MOBILE LIBRARY (not a CLI binary) so the phone
+# app can call it in-process: iOS forbids spawning child processes, so the
+# desktop approach of shelling out to rclone cannot work there.
+#
+# Upstream ships librclone/gomobile for exactly this. Android is documented and
+# supported; rclone's own README says iOS "has not been tested (but should
+# probably work)", so treat the iOS job as the risky one and read its log.
+#
+# Output: an Rclone.xcframework (iOS device + simulator) and an rclone.aar
+# (Android), published as a GitHub release tagged engine-v<rclone version>.
+# The mobile app then pins that version instead of building Go itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      rclone_version:
+        description: 'rclone version to build (blank = the one in app/rclone.version)'
+        required: false
+        default: ''
+      publish:
+        description: 'Publish a GitHub release for the built engine'
+        type: boolean
+        default: true
+  # rclone-watch can hand off here after it records a new upstream version.
+  workflow_call:
+    inputs:
+      rclone_version:
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        run: |
+          set -euo pipefail
+          V='${{ inputs.rclone_version }}'
+          if [ -z "$V" ]; then V=$(tr -d '[:space:]' < app/rclone.version); fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Building rclone engine v$V" >> "$GITHUB_STEP_SUMMARY"
+
+  ios:
+    name: iOS xcframework
+    needs: resolve
+    runs-on: macos-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Install gomobile
+        run: |
+          set -euo pipefail
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch rclone source
+        run: |
+          set -euo pipefail
+          mkdir -p engine && cd engine
+          go mod init syncdeck/engine
+          go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
+          go get golang.org/x/mobile/bind
+
+      - name: gomobile bind (ios + simulator)
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          gomobile init
+          gomobile bind -v \
+            -target=ios,iossimulator \
+            -o Rclone.xcframework \
+            github.com/rclone/rclone/librclone/gomobile
+          du -sh Rclone.xcframework | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Package
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          zip -qry Rclone.xcframework.zip Rclone.xcframework
+          # Swift Package Manager binaryTarget needs this exact checksum.
+          shasum -a 256 Rclone.xcframework.zip | awk '{print $1}' > Rclone.xcframework.zip.sha256
+          echo "SPM checksum: $(cat Rclone.xcframework.zip.sha256)" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rclone-ios
+          path: |
+            engine/Rclone.xcframework.zip
+            engine/Rclone.xcframework.zip.sha256
+
+  android:
+    name: Android aar
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: sdkmanager --install "ndk;27.2.12479018"
+
+      - name: Install gomobile
+        run: |
+          set -euo pipefail
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch rclone source
+        run: |
+          set -euo pipefail
+          mkdir -p engine && cd engine
+          go mod init syncdeck/engine
+          go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
+          go get golang.org/x/mobile/bind
+
+      - name: gomobile bind (android)
+        working-directory: engine
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.2.12479018
+        run: |
+          set -euo pipefail
+          gomobile init
+          gomobile bind -v \
+            -target=android \
+            -javapkg=com.sidrelabs.syncdeck \
+            -o rclone.aar \
+            github.com/rclone/rclone/librclone/gomobile
+          du -sh rclone.aar | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rclone-android
+          path: engine/rclone.aar
+
+  publish:
+    name: Publish engine release
+    needs: [resolve, ios, android]
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: engine-v${{ needs.resolve.outputs.version }}
+          name: rclone mobile engine v${{ needs.resolve.outputs.version }}
+          files: artifacts/**/*
+          body: |
+            Mobile builds of the rclone engine (librclone via gomobile), for the
+            SyncDeck phone app. Not a CLI binary: these are libraries linked into
+            the app, which is what iOS requires.
+
+            - `Rclone.xcframework.zip` for iOS (device + simulator).
+              Use the accompanying `.sha256` as the Swift Package Manager
+              `binaryTarget` checksum.
+            - `rclone.aar` for Android.
+
+            Built from rclone v${{ needs.resolve.outputs.version }}.
