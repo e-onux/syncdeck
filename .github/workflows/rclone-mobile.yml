@@ -85,6 +85,7 @@ jobs:
           # Binding our trimmed package (not rclone's backend/all one) is what
           # keeps the framework from ballooning past 400 MB.
           gomobile bind -v \
+            -ldflags="-s -w" \
             -target=ios,iossimulator \
             -o Rclone.xcframework \
             github.com/e-onux/syncdeck/mobile/engine
@@ -151,6 +152,7 @@ jobs:
           # NDK r27 dropped everything below API 21, and gomobile still defaults
           # to 16, so the minimum has to be stated explicitly.
           gomobile bind -v \
+            -ldflags="-s -w" \
             -target=android \
             -androidapi 21 \
             -javapkg=com.sidrelabs.syncdeck \

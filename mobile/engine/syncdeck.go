@@ -49,7 +49,11 @@ func RPC(method string, input string) *RPCResult {
 	return &RPCResult{Output: output, Status: status}
 }
 
-// Finalize shuts the engine down and releases resources.
-func Finalize() {
+// Shutdown stops the engine and releases resources.
+//
+// Deliberately not called Finalize: gomobile would bind that to a static
+// finalize() on the Java side, which collides with Object.finalize() and fails
+// to compile the Android .aar.
+func Shutdown() {
 	librclone.Finalize()
 }
