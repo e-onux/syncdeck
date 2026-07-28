@@ -227,6 +227,9 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-logline { display: flex; align-items: center; gap: 9px; padding: 1px 0; animation: sd-logline-in .18s ease; }
 .sd-logline__mark { width: 12px; flex: none; text-align: center; color: var(--ink-faint); }
 .sd-logline__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-dim); }
+.sd-logline.is-active .sd-logline__mark { color: var(--accent); }
+.sd-logline.is-active .sd-logline__name { color: var(--ink-dim); }
+.sd-logline__pct { margin-left: auto; flex: none; padding-left: 10px; font-size: .64rem; color: var(--ink-faint); }
 .sd-logline.is-done .sd-logline__mark { color: var(--accent); }
 .sd-logline.is-done .sd-logline__name { color: var(--ink); }
 .sd-logline.is-error .sd-logline__mark, .sd-logline.is-error .sd-logline__name { color: oklch(0.72 0.16 25); }

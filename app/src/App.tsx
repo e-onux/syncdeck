@@ -57,6 +57,7 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
     demoProfile,
     { id: 'photos', name: 'Fotoğraf arşivi', source: '/Users/emir/Pictures', destination: 'arsiv:foto-2026', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
     { id: 'code', name: 'Proje kaynağı', source: '/Users/emir/Code/sidrelabs', destination: 'b2cold:kod/snapshot', mode: 'sync', enabled: false, extraArgs: '', intervalMinutes: 0 },
+    { id: 'long', name: 'CoherencePro Dökümanlar', source: '/Users/emironuk/Documents/Projeler/02_Freelance_Projeler/CoherencePro/Documents', destination: 'onedrive:Projeler/02_Freelance_Projeler/CoherencePro/Documents', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
   ],
   lastRun: {},
   remotes: ['isdrive:', 'arsiv:', 'b2cold:'],
@@ -1821,7 +1822,7 @@ function App() {
   const [progress, setProgress] = useState<SyncProgress | null>(null)
   const [transferBars, setTransferBars] = useState<TransferEvent[]>([])
   const [stopping, setStopping] = useState(false)
-  const [liveLog, setLiveLog] = useState<Array<{ key: string; name: string; status: TransferEvent['status']; direction: TransferEvent['direction'] }>>([])
+  const [liveLog, setLiveLog] = useState<Array<{ id: string; name: string; status: TransferEvent['status']; direction: TransferEvent['direction']; pct: number }>>([])
   const logStreamRef = useRef<HTMLDivElement>(null)
 
   const [accentName, setAccentName] = useState<AccentName>(() => (localStorage.getItem('sd_accent') as AccentName) || 'Mint')
@@ -1948,14 +1949,21 @@ function App() {
           }
           return next.slice(-TRANSFER_BAR_LIMIT)
         })
-        // Stream completed/failed/removed files into the live log (one line each).
+        // Stream files live: a file appears the moment it starts transferring
+        // (status 'active', with %) and updates in place to done/error/deleted.
+        // Keyed by file id so in-progress lines flow rather than only completions.
         setLiveLog((current) => {
           const next = [...current]
           for (const event of data.transferEvents || []) {
-            if (event.status === 'active') continue
-            const key = `${event.id}:${event.status}`
-            if (next.some((line) => line.key === key)) continue
-            next.push({ key, name: event.name, status: event.status, direction: event.direction })
+            const i = next.findIndex((line) => line.id === event.id)
+            if (i >= 0) {
+              // A late 'active' stats tick must not overwrite a finished line.
+              if (next[i].status === 'active' || event.status !== 'active') {
+                next[i] = { id: event.id, name: event.name, status: event.status, direction: event.direction, pct: event.pct }
+              }
+            } else {
+              next.push({ id: event.id, name: event.name, status: event.status, direction: event.direction, pct: event.pct })
+            }
           }
           return next.slice(-LIVE_LOG_LIMIT)
         })
@@ -2587,11 +2595,14 @@ function App() {
                 {running && liveLog.length > 0 ? (
                   <div className="sd-log__stream" ref={logStreamRef}>
                     {liveLog.map((line) => (
-                      <div key={line.key} className={`sd-logline is-${line.status} is-${line.direction}`}>
+                      <div key={line.id} className={`sd-logline is-${line.status} is-${line.direction}`}>
                         <span className="sd-logline__mark">
-                          {line.status === 'done' ? (line.direction === 'download' ? '↓' : line.direction === 'upload' ? '↑' : '✓') : line.status === 'error' ? '✗' : '⌫'}
+                          {line.status === 'active' ? (line.direction === 'download' ? '↓' : line.direction === 'upload' ? '↑' : '•')
+                            : line.status === 'done' ? '✓'
+                              : line.status === 'error' ? '✗' : '⌫'}
                         </span>
                         <span className="sd-logline__name">{line.name}</span>
+                        {line.status === 'active' && <span className="sd-logline__pct">{line.pct}%</span>}
                       </div>
                     ))}
                   </div>
