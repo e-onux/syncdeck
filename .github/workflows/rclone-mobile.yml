@@ -65,27 +65,31 @@ jobs:
           go install golang.org/x/mobile/cmd/gobind@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Fetch rclone source
+      - uses: actions/checkout@v4
+
+      - name: Pin rclone in the trimmed engine module
+        working-directory: mobile/engine
         run: |
           set -euo pipefail
-          mkdir -p engine && cd engine
-          go mod init syncdeck/engine
           go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
           go get golang.org/x/mobile/bind
+          go mod tidy
 
       - name: gomobile bind (ios + simulator)
-        working-directory: engine
+        working-directory: mobile/engine
         run: |
           set -euo pipefail
           gomobile init
+          # Binding our trimmed package (not rclone's backend/all one) is what
+          # keeps the framework from ballooning past 400 MB.
           gomobile bind -v \
             -target=ios,iossimulator \
             -o Rclone.xcframework \
-            github.com/rclone/rclone/librclone/gomobile
-          du -sh Rclone.xcframework | tee -a "$GITHUB_STEP_SUMMARY"
+            github.com/e-onux/syncdeck/mobile/engine
+          echo "trimmed xcframework: $(du -sh Rclone.xcframework | cut -f1)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Package
-        working-directory: engine
+        working-directory: mobile/engine
         run: |
           set -euo pipefail
           zip -qry Rclone.xcframework.zip Rclone.xcframework
@@ -97,8 +101,8 @@ jobs:
         with:
           name: rclone-ios
           path: |
-            engine/Rclone.xcframework.zip
-            engine/Rclone.xcframework.zip.sha256
+            mobile/engine/Rclone.xcframework.zip
+            mobile/engine/Rclone.xcframework.zip.sha256
 
   android:
     name: Android aar
@@ -123,16 +127,18 @@ jobs:
           go install golang.org/x/mobile/cmd/gobind@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Fetch rclone source
+      - uses: actions/checkout@v4
+
+      - name: Pin rclone in the trimmed engine module
+        working-directory: mobile/engine
         run: |
           set -euo pipefail
-          mkdir -p engine && cd engine
-          go mod init syncdeck/engine
           go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
           go get golang.org/x/mobile/bind
+          go mod tidy
 
       - name: gomobile bind (android)
-        working-directory: engine
+        working-directory: mobile/engine
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.2.12479018
         run: |
@@ -145,13 +151,13 @@ jobs:
             -androidapi 21 \
             -javapkg=com.sidrelabs.syncdeck \
             -o rclone.aar \
-            github.com/rclone/rclone/librclone/gomobile
-          du -sh rclone.aar | tee -a "$GITHUB_STEP_SUMMARY"
+            github.com/e-onux/syncdeck/mobile/engine
+          echo "trimmed aar: $(du -sh rclone.aar | cut -f1)" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
           name: rclone-android
-          path: engine/rclone.aar
+          path: mobile/engine/rclone.aar
 
   publish:
     name: Publish engine release
