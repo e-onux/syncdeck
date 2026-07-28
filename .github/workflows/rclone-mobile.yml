@@ -138,8 +138,11 @@ jobs:
         run: |
           set -euo pipefail
           gomobile init
+          # NDK r27 dropped everything below API 21, and gomobile still defaults
+          # to 16, so the minimum has to be stated explicitly.
           gomobile bind -v \
             -target=android \
+            -androidapi 21 \
             -javapkg=com.sidrelabs.syncdeck \
             -o rclone.aar \
             github.com/rclone/rclone/librclone/gomobile
