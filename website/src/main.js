@@ -10,8 +10,8 @@
      defaults are the calm slide with no symbol. */
   var HERO_ANIM = 'slide'; // 'slide' | 'blur' | 'typewriter'
   var HERO_SYMBOL = false; // show a per-word symbol (🤫 sessizce, 🚀 uçarak, …)
-  var WORDS = ['sessizce', 'güvenle', 'hayvanca', 'hızlıca', 'uçarak', 'vahşice', 'mutlu mutlu'];
-  var SYMBOLS = ['🤫', '🛡️', '🦁', '⚡', '🚀', '🐯', '😄'];
+  var WORDS = ['sessizce', 'güvenle', 'akıllıca', 'hızlıca', 'uçarak', 'tamamiyle', 'mutlu mutlu'];
+  var SYMBOLS = ['🤫', '🛡️', '🦊', '⚡', '🚀', '✅', '😄'];
 
   var el = document.getElementById('hero-word');
   var inner = el && el.querySelector('.sd-heroword__inner');
