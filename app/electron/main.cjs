@@ -924,15 +924,30 @@ async function setLaunchAgent(enabled) {
     return;
   }
 
+  const launchDomain = `gui/${process.getuid()}`;
+  const launchService = `${launchDomain}/${APP_ID}`;
+
   if (!enabled) {
+    // Unload by label while launchd still knows the service, then remove the
+    // plist. Removing the file first can leave the already-loaded job behind.
+    spawnSync('/bin/launchctl', ['bootout', launchService]);
     await fs.rm(launchAgentPath(), { force: true });
-    spawnSync('/bin/launchctl', ['bootout', `gui/${process.getuid()}`, launchAgentPath()]);
     return;
   }
 
-  const programArguments = app.isPackaged
-    ? [process.execPath, '--run-scheduled']
-    : [process.execPath, app.getAppPath(), '--run-scheduled'];
+  // Run Electron as a plain Node process for scheduled checks. Unlike starting
+  // the normal .app bundle with --run-scheduled, this never registers a
+  // foreground application with LaunchServices, so no Dock tile can flash.
+  const programArguments = [
+    process.execPath,
+    path.join(app.getAppPath(), 'electron', 'scheduler-runner.cjs'),
+    '--user-data',
+    app.getPath('userData'),
+    '--app-path',
+    app.getAppPath(),
+    '--resources-path',
+    process.resourcesPath,
+  ];
 
   const argsXml = programArguments.map((arg) => `    <string>${plistEscape(arg)}</string>`).join('\n');
   const logPath = path.join(app.getPath('userData'), 'scheduler.log');
@@ -952,6 +967,13 @@ ${argsXml}
   <true/>
   <key>StartInterval</key>
   <integer>${SCHEDULER_TICK_SECONDS}</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>ELECTRON_RUN_AS_NODE</key>
+    <string>1</string>
+  </dict>
   <key>StandardOutPath</key>
   <string>${plistEscape(logPath)}</string>
   <key>StandardErrorPath</key>
@@ -961,8 +983,8 @@ ${argsXml}
 `;
   await fs.mkdir(path.dirname(launchAgentPath()), { recursive: true });
   await fs.writeFile(launchAgentPath(), plist);
-  spawnSync('/bin/launchctl', ['bootout', `gui/${process.getuid()}`, launchAgentPath()]);
-  spawnSync('/bin/launchctl', ['bootstrap', `gui/${process.getuid()}`, launchAgentPath()]);
+  spawnSync('/bin/launchctl', ['bootout', launchService]);
+  spawnSync('/bin/launchctl', ['bootstrap', launchDomain, launchAgentPath()]);
 }
 
 async function runStartupSyncs() {
