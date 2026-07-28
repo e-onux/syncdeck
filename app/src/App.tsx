@@ -28,7 +28,7 @@ import {
 import type { OptionId } from './lib/rclone'
 import './App.css'
 
-const VERSION = '0.3.2'
+const VERSION = '0.3.3'
 const PROVIDER_ICON_URLS = import.meta.glob('./assets/provider-icons/*.svg', {
   eager: true,
   query: '?url',
@@ -57,7 +57,8 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
     demoProfile,
     { id: 'photos', name: 'Fotoğraf arşivi', source: '/Users/emir/Pictures', destination: 'arsiv:foto-2026', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
     { id: 'code', name: 'Proje kaynağı', source: '/Users/emir/Code/sidrelabs', destination: 'b2cold:kod/snapshot', mode: 'sync', enabled: false, extraArgs: '', intervalMinutes: 0 },
-    { id: 'long', name: 'CoherencePro Dökümanlar', source: '/Users/emironuk/Documents/Projeler/02_Freelance_Projeler/CoherencePro/Documents', destination: 'onedrive:Projeler/02_Freelance_Projeler/CoherencePro/Documents', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
+    // Long paths on purpose: keeps the sidebar truncation (ellipsis) visible.
+    { id: 'long', name: 'Müşteri dökümanları', source: '/Users/emir/Documents/Projeler/Freelance/Ornek-Musteri/Documents', destination: 'isdrive:Projeler/Freelance/Ornek-Musteri/Documents', mode: 'copy', enabled: false, extraArgs: '', intervalMinutes: 0 },
   ],
   lastRun: {},
   remotes: ['isdrive:', 'arsiv:', 'b2cold:'],

@@ -125,7 +125,10 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-body { position: relative; z-index: 2; flex: 1 1 auto; display: flex; min-height: 0; }
 
 /* ---- sidebar ---- */
-.sd-side { flex: 0 0 264px; display: flex; flex-direction: column; min-height: 0; background: color-mix(in oklch, var(--bg-2) 55%, transparent); border-right: 1px solid var(--line-soft); }
+/* min-width:0 is required: without it the flex item's automatic minimum size is
+   its min-content width, and the nowrap profile paths would stretch the sidebar
+   past its 264px basis instead of ellipsizing. */
+.sd-side { flex: 0 0 264px; min-width: 0; display: flex; flex-direction: column; min-height: 0; background: color-mix(in oklch, var(--bg-2) 55%, transparent); border-right: 1px solid var(--line-soft); }
 .sd-side__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint); }
 .sd-side__count { color: var(--accent); }
 .sd-side__list { flex: 1 1 auto; overflow-y: auto; padding: 0 10px; }
