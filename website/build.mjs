@@ -1,13 +1,20 @@
 /**
  * SyncDeck - speed-first static build (same technique as sidrelabs.com).
  *
- * Produces a single self-contained dist/index.html:
+ * Produces one self-contained HTML page PER LANGUAGE:
+ *   dist/index.html          default language (tr)
+ *   dist/<lang>/index.html   every other language the desktop app ships
+ *
  *   - CSS + JS minified and inlined (one request, zero render-blocking links)
- *   - web fonts self-hosted into dist/fonts (no third-party round trip),
- *     referenced with RELATIVE paths so the same bundle works both at the
- *     site root (local preview) and under the /syncdeck/ sub-path (prod)
+ *   - web fonts self-hosted once into dist/fonts and referenced with an
+ *     ABSOLUTE path (BASE_PATH) so the same markup works at any URL depth —
+ *     required now that pages live at /syncdeck/ and /syncdeck/<lang>/
  *   - <link rel="preload"> for the latin subset
- *   - index.html precompressed to index.html.gz for nginx gzip_static
+ *   - canonical + hreflang alternates for every locale
+ *   - each page precompressed to .gz for nginx gzip_static
+ *
+ * nginx picks the language from Accept-Language (see nginx.conf), so there is
+ * no redirect and no client-side detection: the first byte is already right.
  *
  * Network is only needed to self-host fonts; if it is unavailable the build
  * falls back to the Google Fonts @import so it still succeeds offline.
@@ -15,10 +22,16 @@
 import { transform } from 'esbuild';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
+import { LOCALES, DEFAULT_LANG } from './src/i18n.mjs';
 
 const SRC = new URL('./src/', import.meta.url);
 const DIST = new URL('./dist/', import.meta.url);
 const FONTS_OUT = new URL('./dist/fonts/', import.meta.url);
+
+// Public path the site is mounted at. Absolute so /syncdeck/ and
+// /syncdeck/en/ can share one dist/fonts directory.
+const BASE = process.env.BASE_PATH || '/syncdeck/';
+const SITE = (process.env.SITE_ORIGIN || 'https://sidrelabs.com').replace(/\/$/, '');
 
 const GOOGLE_CSS =
   'https://fonts.googleapis.com/css2' +
@@ -60,10 +73,10 @@ async function selfHostFonts() {
         await writeFile(new URL(file, FONTS_OUT), buf);
         seen.set(url, file);
       }
-      // RELATIVE url -> works at "/" and under "/syncdeck/" alike.
-      const localBlock = block.replace(url, `fonts/${file}`);
+      // ABSOLUTE url -> resolves the same from /syncdeck/ and /syncdeck/<lang>/.
+      const localBlock = block.replace(url, `${BASE}fonts/${file}`);
       out += localBlock + '\n';
-      if (isLatin) preloads.add(`fonts/${file}`);
+      if (isLatin) preloads.add(`${BASE}fonts/${file}`);
     }
     if (!out) throw new Error('no @font-face blocks parsed');
     return { css: out, preloads: [...preloads].slice(0, 4) };
@@ -73,11 +86,76 @@ async function selfHostFonts() {
   }
 }
 
+/** Every locale must carry the same keys, or a page silently ships {{holes}}. */
+function assertLocalesComplete() {
+  const reference = Object.keys(LOCALES[DEFAULT_LANG]).sort();
+  for (const [lang, dict] of Object.entries(LOCALES)) {
+    const keys = Object.keys(dict).sort();
+    const missing = reference.filter((k) => !keys.includes(k));
+    const extra = keys.filter((k) => !reference.includes(k));
+    if (missing.length || extra.length) {
+      throw new Error(
+        `locale "${lang}" is out of sync` +
+          (missing.length ? ` — missing: ${missing.join(', ')}` : '') +
+          (extra.length ? ` — unexpected: ${extra.join(', ')}` : ''),
+      );
+    }
+  }
+}
+
+const attr = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+/** Public URL for a locale: default sits at the root, others in a subfolder. */
+const langPath = (lang) => (lang === DEFAULT_LANG ? BASE : `${BASE}${lang}/`);
+
+function renderPage(template, lang, { version }) {
+  const dict = LOCALES[lang];
+
+  const alternates = [
+    ...Object.keys(LOCALES).map(
+      (l) => `<link rel="alternate" hreflang="${l}" href="${SITE}${langPath(l)}" />`,
+    ),
+    `<link rel="alternate" hreflang="x-default" href="${SITE}${BASE}" />`,
+  ].join('\n');
+
+  const langLinks = Object.entries(LOCALES)
+    .map(([l, d]) =>
+      l === lang
+        ? `<span class="sd-langs__cur" aria-current="true">${d.name}</span>`
+        : `<a href="${langPath(l)}" hreflang="${l}" lang="${l}">${d.name}</a>`,
+    )
+    .join('\n      ');
+
+  const values = {
+    ...dict,
+    lang,
+    dir: dict.dir,
+    canonical: `${SITE}${langPath(lang)}`,
+    ogLocale: lang,
+    alternates,
+    langLinks,
+    navAria: dict.navFeatures,
+    heroWord0: dict.heroWords[0],
+    heroWordsJson: attr(JSON.stringify(dict.heroWords)),
+  };
+
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    if (!(key in values)) throw new Error(`unknown placeholder {{${key}}} (lang ${lang})`);
+    const value = values[key];
+    if (Array.isArray(value)) return '';
+    return String(value).replace(/\{version\}/g, version);
+  });
+}
+
 async function main() {
+  assertLocalesComplete();
+
   await rm(DIST, { recursive: true, force: true });
   await mkdir(DIST, { recursive: true });
 
-  let [html, css, js] = await Promise.all([
+  const pkg = JSON.parse(await readFile(new URL('./package.json', import.meta.url), 'utf8'));
+  const version = pkg.version;
+
+  let [template, css, js] = await Promise.all([
     read('index.html'),
     read('styles.css'),
     read('main.js'),
@@ -97,23 +175,32 @@ async function main() {
       '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
   }
 
-  // 2. Minify.
+  // 2. Minify once, reuse for every language.
   const { code: minJs } = await transform(js, { loader: 'js', minify: true, target: 'es2019' });
   const { code: minCss } = await transform(css, { loader: 'css', minify: true });
 
-  // 3. Inline everything into the HTML.
-  html = html
-    .replace('<link rel="stylesheet" href="styles.css" />', `${preloadTags}<style>${minCss}</style>`)
-    .replace('<script src="main.js"></script>', `<script>${minJs}</script>`)
-    .replace(/<!--[\s\S]*?-->/g, '') // drop HTML comments
-    .replace(/\n\s*\n/g, '\n');
-
-  await writeFile(new URL('index.html', DIST), html);
-  await writeFile(new URL('index.html.gz', DIST), gzipSync(Buffer.from(html), { level: 9 }));
-
   const kb = (b) => (b / 1024).toFixed(1) + ' KB';
-  const gz = gzipSync(Buffer.from(html), { level: 9 }).length;
-  console.log(`✓ dist/index.html  ${kb(Buffer.byteLength(html))}  (gzip ${kb(gz)})`);
+
+  // 3. Render + inline + write one page per language.
+  for (const lang of Object.keys(LOCALES)) {
+    let html = renderPage(template, lang, { version })
+      .replace('<link rel="stylesheet" href="styles.css" />', `${preloadTags}<style>${minCss}</style>`)
+      .replace('<script src="main.js"></script>', `<script>${minJs}</script>`)
+      .replace(/<!--[\s\S]*?-->/g, '') // drop HTML comments
+      .replace(/\n\s*\n/g, '\n');
+
+    const dir = lang === DEFAULT_LANG ? DIST : new URL(`./${lang}/`, DIST);
+    if (lang !== DEFAULT_LANG) await mkdir(dir, { recursive: true });
+
+    const gz = gzipSync(Buffer.from(html), { level: 9 });
+    await writeFile(new URL('index.html', dir), html);
+    await writeFile(new URL('index.html.gz', dir), gz);
+
+    const where = lang === DEFAULT_LANG ? 'dist/index.html' : `dist/${lang}/index.html`;
+    console.log(`✓ ${where.padEnd(22)} ${kb(Buffer.byteLength(html)).padStart(9)}  (gzip ${kb(gz.length)})`);
+  }
+
+  console.log(`✓ ${Object.keys(LOCALES).length} languages · default "${DEFAULT_LANG}" · base ${BASE}`);
   console.log(`✓ fonts self-hosted: ${fonts ? fonts.preloads.length + ' preloaded' : 'CDN fallback'}`);
 }
 

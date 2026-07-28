@@ -352,6 +352,13 @@ a { color: inherit; text-decoration: none; }
 .sd-foot__col-h { font-family: var(--ff-mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 16px; }
 .sd-foot__col a { display: block; font-size: .88rem; color: var(--ink-dim); margin-bottom: 11px; transition: color .2s; }
 .sd-foot a:hover { color: var(--accent); }
+/* language switcher — every locale is a real, linkable page */
+.sd-langs { max-width: 1240px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px) 30px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; border-top: 1px solid var(--line-soft); padding-top: 26px; }
+.sd-langs__label { font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-faint); margin-inline-end: 4px; }
+.sd-langs a, .sd-langs__cur { font-size: .84rem; color: var(--ink-dim); transition: color .2s; }
+.sd-langs a:hover { color: var(--accent); }
+.sd-langs__cur { color: var(--accent); }
+
 .sd-foot__base { border-top: 1px solid var(--line-soft); }
 .sd-foot__base-in { max-width: 1240px; margin: 0 auto; padding: 22px clamp(20px, 4vw, 48px) 44px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
 .sd-foot__base span { font-family: var(--ff-mono); font-size: .62rem; letter-spacing: .1em; color: var(--ink-faint); }

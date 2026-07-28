@@ -1,13 +1,13 @@
 {
   "name": "syncdeck-website",
-  "version": "0.1.3",
+  "version": "0.3.3",
   "private": true,
   "type": "module",
   "description": "SyncDeck product site - static, speed-first build (served at sidrelabs.com/syncdeck)",
   "scripts": {
     "build": "node build.mjs",
     "dev": "node --watch-path=src build.mjs & npx --yes serve -l 8080 src",
-    "preview": "npm run build && npx --yes serve -l 8080 dist"
+    "preview": "BASE_PATH=/ node build.mjs && npx --yes serve -l 8080 dist"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

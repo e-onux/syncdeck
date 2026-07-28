@@ -10,12 +10,21 @@
      defaults are the calm slide with no symbol. */
   var HERO_ANIM = 'slide'; // 'slide' | 'blur' | 'typewriter'
   var HERO_SYMBOL = false; // show a per-word symbol (🤫 sessizce, 🚀 uçarak, …)
-  var WORDS = ['sessizce', 'güvenle', 'akıllıca', 'hızlıca', 'uçarak', 'tamamiyle', 'mutlu mutlu'];
   var SYMBOLS = ['🤫', '🛡️', '🦊', '⚡', '🚀', '✅', '😄'];
 
   var el = document.getElementById('hero-word');
   var inner = el && el.querySelector('.sd-heroword__inner');
   if (!el || !inner) return;
+
+  /* The rotating words are language specific, so the build writes them into
+     data-words (JSON) per locale. Fall back to whatever is already rendered. */
+  var WORDS;
+  try {
+    WORDS = JSON.parse(el.getAttribute('data-words') || '[]');
+  } catch (e) {
+    WORDS = [];
+  }
+  if (!WORDS.length) WORDS = [inner.textContent.trim()];
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var anim = reduce ? 'reduce' : HERO_ANIM;

@@ -1,14 +1,17 @@
 <!doctype html>
-<html lang="tr">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SyncDeck · Klasörlerini sessizce senkronize et</title>
-<meta name="description" content="SyncDeck · rclone için sakin bir masaüstü arayüzü. Herhangi bir yerel klasörü dilediğin buluta mount etmeden eşitle — ayna sync ya da güvenli kopyala. macOS, Windows ve Linux." />
+<title>{{title}}</title>
+<meta name="description" content="{{description}}" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="SyncDeck · Klasörlerini sessizce senkronize et" />
-<meta property="og:description" content="rclone için sakin bir masaüstü arayüzü. Mount etmeden eşitle — ayna sync ya da güvenli kopyala." />
-<meta property="og:url" content="https://sidrelabs.com/syncdeck/" />
+<meta property="og:title" content="{{ogTitle}}" />
+<meta property="og:description" content="{{ogDescription}}" />
+<meta property="og:url" content="{{canonical}}" />
+<meta property="og:locale" content="{{ogLocale}}" />
+<link rel="canonical" href="{{canonical}}" />
+{{alternates}}
 <meta name="theme-color" content="#0c1f1c" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2030%2028'%20fill='none'%3E%3Cpath%20d='M6%208%20L15%2013.5%20L24%208'%20stroke='%235fd6b6'%20stroke-width='2.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Cpath%20d='M6%2014%20L15%2019.5%20L24%2014'%20stroke='%235fd6b6'%20stroke-width='2.4'%20opacity='0.55'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Cpath%20d='M6%2020%20L15%2025.5%20L24%2020'%20stroke='%231c4742'%20stroke-width='2.3'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="styles.css" />
@@ -30,15 +33,15 @@
         </svg>
         <span class="sd-brand__name">SYNCDECK</span>
       </a>
-      <nav class="sd-nav" aria-label="Birincil">
-        <a href="#features">Özellikler</a>
-        <a href="#modes">Modlar</a>
-        <a href="#providers">Sağlayıcılar</a>
-        <a href="#download">İndir</a>
+      <nav class="sd-nav" aria-label="{{navAria}}">
+        <a href="#features">{{navFeatures}}</a>
+        <a href="#modes">{{navModes}}</a>
+        <a href="#providers">{{navProviders}}</a>
+        <a href="#download">{{navDownload}}</a>
       </nav>
       <div class="sd-header__cta">
         <a href="https://github.com/e-onux/syncdeck" class="sl-btn sl-btn--ghost sl-btn--sm">GitHub</a>
-        <a href="#download" class="sl-btn sl-btn--sm">İndir</a>
+        <a href="#download" class="sl-btn sl-btn--sm">{{navDownload}}</a>
       </div>
     </div>
   </header>
@@ -46,79 +49,79 @@
   <!-- ===================== HERO ===================== -->
   <section class="sd-hero">
     <div class="sd-eyebrow">
-      <span>Klasör senkronizasyonu</span>
+      <span>{{heroEyebrow}}</span>
     </div>
-    <h1 class="sd-hero__title">Klasörlerini <span class="sd-heroword" id="hero-word" data-anim="slide" aria-label="sessizce"><span class="sd-heroword__inner">sessizce</span></span> senkronize et</h1>
-    <p class="sd-hero__lede">Herhangi bir yerel klasörü dilediğin buluta <strong>mount etmeden</strong> eşitle. Ayna sync ya da güvenli kopyala, profili kur, açılışta sessizce çalışsın.</p>
+    <h1 class="sd-hero__title">{{heroTitlePre}} <span class="sd-heroword" id="hero-word" data-anim="slide" data-words="{{heroWordsJson}}" aria-label="{{heroWord0}}"><span class="sd-heroword__inner">{{heroWord0}}</span></span> {{heroTitlePost}}</h1>
+    <p class="sd-hero__lede">{{heroLede}}</p>
     <div class="sd-hero__cta">
-      <a href="#download" class="sl-btn sl-btn--md">macOS için indir <span class="sl-btn__arr">↓</span></a>
-      <a href="https://github.com/e-onux/syncdeck" class="sl-btn sl-btn--ghost sl-btn--md">Kaynağı gör</a>
+      <a href="#download" class="sl-btn sl-btn--md">{{heroCtaMac}} <span class="sl-btn__arr">↓</span></a>
+      <a href="https://github.com/e-onux/syncdeck" class="sl-btn sl-btn--ghost sl-btn--md">{{heroCtaSource}}</a>
     </div>
-    <div class="sd-hero__note">Apple Silicon · Sürüm 0.3.3 · Windows &amp; Linux da mevcut</div>
+    <div class="sd-hero__note">{{heroNote}}</div>
 
     <!-- ===== APP WINDOW MOCK ===== -->
     <div class="sd-window-wrap">
       <div class="sd-window-glow" aria-hidden="true"></div>
-      <div class="sd-window" role="img" aria-label="SyncDeck uygulama penceresi: Belgeler yedeği profili senkronize ediliyor">
+      <div class="sd-window" role="img" aria-label="{{mockAria}}">
         <!-- title bar -->
         <div class="sd-titlebar">
           <div class="sd-traffic" aria-hidden="true">
             <span></span><span></span><span class="is-accent"></span>
           </div>
           <span class="sd-titlebar__name">SYNCDECK</span>
-          <span class="sd-titlebar__conn"><span class="sd-dot sd-dot--pulse"></span>Bağlı</span>
+          <span class="sd-titlebar__conn"><span class="sd-dot sd-dot--pulse"></span>{{mockConnected}}</span>
         </div>
         <div class="sd-window__body">
           <!-- sidebar -->
           <div class="sd-sidebar">
-            <div class="sd-sidebar__head">Profiller · 03</div>
+            <div class="sd-sidebar__head">{{mockProfiles}}</div>
             <div class="sd-prof is-active">
               <span class="sd-prof__icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
               <div class="sd-prof__text">
-                <div class="sd-prof__name">Belgeler yedeği</div>
-                <div class="sd-prof__tag">AYNA · isdrive:</div>
+                <div class="sd-prof__name">{{mockProf1}}</div>
+                <div class="sd-prof__tag">{{mockProf1Tag}}</div>
               </div>
             </div>
             <div class="sd-prof">
               <span class="sd-prof__icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
               <div class="sd-prof__text">
-                <div class="sd-prof__name">Fotoğraf arşivi</div>
-                <div class="sd-prof__tag">KOPYA · arsiv:</div>
+                <div class="sd-prof__name">{{mockProf2}}</div>
+                <div class="sd-prof__tag">{{mockProf2Tag}}</div>
               </div>
             </div>
             <div class="sd-prof">
               <span class="sd-prof__icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.2h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
               <div class="sd-prof__text">
-                <div class="sd-prof__name">Proje kaynağı</div>
-                <div class="sd-prof__tag">AYNA · b2cold:</div>
+                <div class="sd-prof__name">{{mockProf3}}</div>
+                <div class="sd-prof__tag">{{mockProf3Tag}}</div>
               </div>
             </div>
           </div>
           <!-- content -->
           <div class="sd-content">
-            <div class="sd-content__kicker">Sync profili · aktif</div>
-            <div class="sd-content__title">Belgeler yedeği</div>
+            <div class="sd-content__kicker">{{mockKicker}}</div>
+            <div class="sd-content__title">{{mockProf1}}</div>
             <div class="sd-route">
               <div class="sd-route__box">
-                <div class="sd-route__label"><b>01</b> KAYNAK</div>
+                <div class="sd-route__label"><b>01</b> {{mockSource}}</div>
                 <div class="sd-route__val">/Users/emir/Documents</div>
               </div>
               <span class="sd-route__arrow">→</span>
               <div class="sd-route__box">
-                <div class="sd-route__label"><b>02</b> HEDEF</div>
-                <div class="sd-route__val">isdrive:Yedekler</div>
+                <div class="sd-route__label"><b>02</b> {{mockTarget}}</div>
+                <div class="sd-route__val">isdrive:Backups</div>
               </div>
             </div>
             <div class="sd-log">
-              <div class="sd-log__head"><span class="sd-log__dot"></span><span class="sd-log__label">Canlı günlük</span></div>
+              <div class="sd-log__head"><span class="sd-log__dot"></span><span class="sd-log__label">{{mockLog}}</span></div>
               <pre>Transferred: 308.4 MiB / 482 MiB, 64%
-↻ isdrive:Yedekler aktarılıyor…</pre>
+{{mockLogLine}}</pre>
             </div>
           </div>
         </div>
         <!-- status bar -->
         <div class="sd-statusbar">
-          <span class="sd-statusbar__seg"><span class="sd-dot sd-dot--pulse"></span>Senkronize ediliyor</span>
+          <span class="sd-statusbar__seg"><span class="sd-dot sd-dot--pulse"></span>{{mockSyncing}}</span>
           <span class="sd-eq" aria-hidden="true">
             <span style="transform:scaleY(0.25);background:#5fd6b6;animation:sd-eq .70s ease-in-out -0s infinite"></span>
             <span style="transform:scaleY(0.66);background:color-mix(in oklch, var(--accent) 45%, transparent);animation:sd-eq 1.10s ease-in-out -0.7s infinite"></span>
@@ -136,7 +139,7 @@
             <span style="transform:scaleY(0.68);background:color-mix(in oklch, var(--accent) 45%, transparent);animation:sd-eq 1.40s ease-in-out -0.3s infinite"></span>
           </span>
           <span class="sd-status__speed">7.6 MiB/s</span>
-          <span class="sd-status__meta">24 / 38 dosya · ETA 00:42</span>
+          <span class="sd-status__meta">{{mockMeta}}</span>
         </div>
       </div>
     </div>
@@ -144,7 +147,7 @@
 
   <!-- ===================== PROVIDERS ===================== -->
   <section id="providers" class="sd-providers">
-    <p class="sd-providers__label">Açık kaynak motorun desteklediği <b>70+</b> bulut arka ucuyla çalışır</p>
+    <p class="sd-providers__label">{{providersLabel}}</p>
     <div class="sd-marquee">
       <div class="sd-marquee__track">
         <span class="sd-chip">Google Drive</span>
@@ -182,63 +185,63 @@
   <!-- ===================== FEATURES ===================== -->
   <section id="features" class="sd-section">
     <div class="sd-section__head">
-      <p class="sl-mono" style="margin:0 0 18px"><span class="sl-mono__tick"></span> Ne yapar</p>
-      <h2 class="sd-h2">Bir terminal kadar güçlü, bir uygulama kadar sakin.</h2>
+      <p class="sl-mono" style="margin:0 0 18px"><span class="sl-mono__tick"></span> {{featKicker}}</p>
+      <h2 class="sd-h2">{{featH2}}</h2>
     </div>
     <div class="sl-svc-list">
       <div class="sl-svc">
         <span class="sl-svc__idx">01</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">Sync profilleri</h3>
-          <p class="sl-svc__kicker">Kaynak · hedef · mod</p>
-          <p>Kaynak, hedef, mod ve ek argümanları tek bir profilde sakla. İstediğin kadar oluştur, sol panelden anında geç.</p>
+          <h3 class="sl-svc__title">{{f1Title}}</h3>
+          <p class="sl-svc__kicker">{{f1Kicker}}</p>
+          <p>{{f1Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">Profil</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f1Tag}}</span>
       </div>
       <div class="sl-svc">
         <span class="sl-svc__idx">02</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">Ayna sync &amp; kopyala</h3>
-          <p class="sl-svc__kicker">Tam kontrol</p>
-          <p>Hedefi birebir aynala ya da yalnızca dosya ekle. Hiçbir şey beklenmedik şekilde silinmez, kontrol sende.</p>
+          <h3 class="sl-svc__title">{{f2Title}}</h3>
+          <p class="sl-svc__kicker">{{f2Kicker}}</p>
+          <p>{{f2Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">Mod</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f2Tag}}</span>
       </div>
       <div class="sl-svc">
         <span class="sl-svc__idx">03</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">Açılışta otomatik</h3>
-          <p class="sl-svc__kicker">Kur ve unut</p>
-          <p>Etkin profiller her girişte sessizce çalışır. LaunchAgent ya da login item ile sistemine entegre olur.</p>
+          <h3 class="sl-svc__title">{{f3Title}}</h3>
+          <p class="sl-svc__kicker">{{f3Kicker}}</p>
+          <p>{{f3Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">Otomasyon</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f3Tag}}</span>
       </div>
       <div class="sl-svc">
         <span class="sl-svc__idx">04</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">Mount gerektirmez</h3>
-          <p class="sl-svc__kicker">Hızlı &amp; temiz</p>
-          <p>Doğrudan sync ve copy çağrılır. Sürücü bağlamaya, sanal disk oluşturmaya gerek yok.</p>
+          <h3 class="sl-svc__title">{{f4Title}}</h3>
+          <p class="sl-svc__kicker">{{f4Kicker}}</p>
+          <p>{{f4Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">Motor</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f4Tag}}</span>
       </div>
       <div class="sl-svc">
         <span class="sl-svc__idx">05</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">İstemci sihirbazı</h3>
-          <p class="sl-svc__kicker">GUI → komut satırı</p>
-          <p>Yeni bulut bağlantısını adım adım kur. SyncDeck arka plandaki motor komutunu senin için oluşturur ve çalıştırır.</p>
+          <h3 class="sl-svc__title">{{f5Title}}</h3>
+          <p class="sl-svc__kicker">{{f5Kicker}}</p>
+          <p>{{f5Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">Sihirbaz</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f5Tag}}</span>
       </div>
       <div class="sl-svc">
         <span class="sl-svc__idx">06</span>
         <div class="sl-svc__body">
-          <h3 class="sl-svc__title">9 dil desteği</h3>
-          <p class="sl-svc__kicker">Çok dilli arayüz</p>
-          <p>İngilizce, Türkçe, Almanca, İspanyolca, Çince, Japonca, Rusça, Felemenkçe ve Arapça olarak hazır.</p>
+          <h3 class="sl-svc__title">{{f6Title}}</h3>
+          <p class="sl-svc__kicker">{{f6Kicker}}</p>
+          <p>{{f6Body}}</p>
         </div>
-        <span class="sl-svc__tag sl-tag sl-tag--accent">i18n</span>
+        <span class="sl-svc__tag sl-tag sl-tag--accent">{{f6Tag}}</span>
       </div>
     </div>
   </section>
@@ -246,29 +249,29 @@
   <!-- ===================== SYNC MODES ===================== -->
   <section id="modes" class="sd-section">
     <div class="sd-section__head">
-      <p class="sl-mono" style="margin:0 0 18px"><span class="sl-mono__tick"></span> İki mod</p>
-      <h2 class="sd-h2">Yansıt ya da koru — kararı sen ver.</h2>
+      <p class="sl-mono" style="margin:0 0 18px"><span class="sl-mono__tick"></span> {{modesKicker}}</p>
+      <h2 class="sd-h2">{{modesH2}}</h2>
     </div>
     <div class="sd-modes-grid">
       <div class="sl-card sl-card--hover sd-mode">
         <div class="sd-mode__head">
           <span class="sd-mode__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.5-4"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.5 4"/><polyline points="19 2 19.6 6.8 15 7.5"/><polyline points="5 22 4.4 17.2 9 16.5"/></svg></span>
           <div>
-            <h3 class="sd-mode__title">Ayna sync</h3>
+            <h3 class="sd-mode__title">{{mode1Title}}</h3>
             <code class="sd-mode__code">engine · sync</code>
           </div>
         </div>
-        <p class="sd-mode__body">Hedefi kaynakla birebir aynı hale getirir. Kaynakta olmayan dosyalar hedefte de silinir — tam bir yansıma istediğinde.</p>
+        <p class="sd-mode__body">{{mode1Body}}</p>
       </div>
       <div class="sl-card sl-card--hover sd-mode">
         <div class="sd-mode__head">
           <span class="sd-mode__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="m8.5 12 2.3 2.3 4.7-4.9"/></svg></span>
           <div>
-            <h3 class="sd-mode__title">Sadece kopyala</h3>
+            <h3 class="sd-mode__title">{{mode2Title}}</h3>
             <code class="sd-mode__code">engine · copy</code>
           </div>
         </div>
-        <p class="sd-mode__body">Dosyaları hedefe ekler, hiçbir şeyi silmez. Daha temkinli kullanım için güvenli seçim — geri dönüşsüz veri kaybı riski yok.</p>
+        <p class="sd-mode__body">{{mode2Body}}</p>
       </div>
     </div>
   </section>
@@ -276,31 +279,31 @@
   <!-- ===================== DOWNLOAD ===================== -->
   <section id="download" class="sd-section">
     <div class="sd-section__head sd-section__head--center">
-      <p class="sl-mono" style="margin:0 0 18px">İndir</p>
-      <h2 class="sd-h2">Her masaüstünde çalışır.</h2>
-      <p class="sd-download__lede">Sürüm 0.3.3 · bağımsız derlemeler. <span class="ac">Motor dahili gelir — ayrıca kurulum gerekmez.</span></p>
+      <p class="sl-mono" style="margin:0 0 18px">{{dlKicker}}</p>
+      <h2 class="sd-h2">{{dlH2}}</h2>
+      <p class="sd-download__lede">{{dlLede}}</p>
     </div>
     <div class="sd-dl-grid">
       <a href="https://github.com/e-onux/syncdeck/releases" class="sl-card sl-card--hover sd-dl-card">
         <span class="sd-dl-card__icon"><svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M16.36 12.78c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.42-.14-2.76.83-3.48.83-.71 0-1.82-.81-2.99-.79-1.54.02-2.96.89-3.75 2.27-1.6 2.77-.41 6.88 1.15 9.13.76 1.1 1.67 2.34 2.86 2.29 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.07 6.02c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.68 1.37-.59.67-1.1 1.76-.96 2.79 1.02.08 2.06-.52 2.7-1.26z"/></svg></span>
         <div class="sd-dl-card__os">macOS</div>
-        <div class="sd-dl-card__detail">Apple Silicon · 12+</div>
+        <div class="sd-dl-card__detail">{{dlMacDetail}}</div>
         <span class="sl-tag sl-tag--accent">.dmg / .zip</span>
       </a>
       <a href="https://github.com/e-onux/syncdeck/releases" class="sl-card sl-card--hover sd-dl-card">
         <span class="sd-dl-card__icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.4l7.5-1.03v7.04H3zm0 13.2l7.5 1.03v-6.96H3zM11.4 4.24L21 2.9v8.55h-9.6zm0 15.52L21 21.1v-8.46h-9.6z"/></svg></span>
         <div class="sd-dl-card__os">Windows</div>
-        <div class="sd-dl-card__detail">x64 · 10+</div>
+        <div class="sd-dl-card__detail">{{dlWinDetail}}</div>
         <span class="sl-tag sl-tag--accent">.exe / portable</span>
       </a>
       <a href="https://github.com/e-onux/syncdeck/releases" class="sl-card sl-card--hover sd-dl-card">
         <span class="sd-dl-card__icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2.2 0-3.5 1.9-3.5 4.3 0 1.5.5 2.4.5 3.6 0 1-.8 1.8-1.7 3-1 1.3-2.3 2.9-2.3 5 0 .8.3 1.4.8 1.8-.1.4-.1.8.1 1.1.4.6 1.3.8 2.3.9 1 .1 1.9.3 2.4.9.4.4 1 .6 1.4.6s1-.2 1.4-.6c.5-.6 1.4-.8 2.4-.9 1-.1 1.9-.3 2.3-.9.2-.3.2-.7.1-1.1.5-.4.8-1 .8-1.8 0-2.1-1.3-3.7-2.3-5-.9-1.2-1.7-2-1.7-3 0-1.2.5-2.1.5-3.6C15.5 3.9 14.2 2 12 2zm-1.4 5.2c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9zm2.8 0c.4 0 .7.4.7.9s-.3.9-.7.9-.7-.4-.7-.9.3-.9.7-.9z"/></svg></span>
         <div class="sd-dl-card__os">Linux</div>
-        <div class="sd-dl-card__detail">x64</div>
+        <div class="sd-dl-card__detail">{{dlLinuxDetail}}</div>
         <span class="sl-tag sl-tag--accent">AppImage / .deb</span>
       </a>
     </div>
-    <p class="sd-download__note">Tüm derlemeler <a href="https://github.com/e-onux/syncdeck/releases">GitHub Releases</a> sayfasında</p>
+    <p class="sd-download__note">{{dlNote}}</p>
   </section>
 
   <!-- ===================== FOOTER ===================== -->
@@ -315,30 +318,34 @@
           </svg>
           <span>SYNCDECK</span>
         </div>
-        <p class="sd-foot__desc">Açık kaynak rclone motoru için sakin bir masaüstü sarmalayıcısı (wrapper). <a href="https://sidrelabs.com">Sidre Labs</a> tarafından geliştirildi.</p>
+        <p class="sd-foot__desc">{{footDesc}}</p>
       </div>
       <div class="sd-foot__col">
-        <div class="sd-foot__col-h">Ürün</div>
-        <a href="#features">Özellikler</a>
-        <a href="#modes">Senkron modları</a>
-        <a href="#download">İndir</a>
+        <div class="sd-foot__col-h">{{footProduct}}</div>
+        <a href="#features">{{navFeatures}}</a>
+        <a href="#modes">{{footModesLink}}</a>
+        <a href="#download">{{navDownload}}</a>
       </div>
       <div class="sd-foot__col">
-        <div class="sd-foot__col-h">Kaynak</div>
+        <div class="sd-foot__col-h">{{footSource}}</div>
         <a href="https://github.com/e-onux/syncdeck">GitHub</a>
-        <a href="https://github.com/e-onux/syncdeck/releases">Sürümler</a>
+        <a href="https://github.com/e-onux/syncdeck/releases">{{footReleases}}</a>
         <a href="https://rclone.org">rclone.org</a>
       </div>
       <div class="sd-foot__col">
-        <div class="sd-foot__col-h">Bağlantı</div>
+        <div class="sd-foot__col-h">{{footContact}}</div>
         <a href="https://sidrelabs.com">sidrelabs.com</a>
-        <a href="https://github.com/e-onux/syncdeck/issues">Sorun bildir</a>
+        <a href="https://github.com/e-onux/syncdeck/issues">{{footIssues}}</a>
       </div>
     </div>
+    <nav class="sd-langs" aria-label="{{footLang}}">
+      <span class="sd-langs__label">{{footLang}}</span>
+      {{langLinks}}
+    </nav>
     <div class="sd-foot__base">
       <div class="sd-foot__base-in">
         <span>© <span id="year">2026</span> SyncDeck · sidrelabs.com/syncdeck</span>
-        <span>rclone, bağımsız açık kaynak proje ekibinin markasıdır.</span>
+        <span>{{footTrademark}}</span>
       </div>
     </div>
   </footer>
