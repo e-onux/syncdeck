@@ -116,7 +116,7 @@ function findRclone({
   }
 
   const which = spawnSyncImpl('/usr/bin/env', ['which', 'rclone'], { encoding: 'utf8', env });
-  return which.status === 0 ? String(which.stdout || '').trim() || null : null;
+  return which && which.status === 0 ? String(which.stdout || '').trim() || null : null;
 }
 
 function hasArg(args, name) {

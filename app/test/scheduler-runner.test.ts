@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   buildRcloneArgs,
@@ -80,7 +81,9 @@ describe('scheduler runner CLI', () => {
 describe('rclone resolution and invocation', () => {
   it('uses the same managed, resources, app and system candidate order', () => {
     const attempted: string[] = []
-    const resourcesRclone = '/bundle/Resources/bin/darwin/arm64/rclone'
+    // Built with path.join so separators match whatever OS the test runs on
+    // (findRclone joins candidate paths the same way).
+    const resourcesRclone = path.join('/bundle/Resources', 'bin', 'darwin', 'arm64', 'rclone')
     const result = findRclone({
       userData: '/data',
       appPath: '/bundle/Resources/app.asar',
@@ -96,7 +99,7 @@ describe('rclone resolution and invocation', () => {
     })
 
     expect(result).toBe(resourcesRclone)
-    expect(attempted).toEqual(['/env/rclone', '/data/engine/rclone', resourcesRclone])
+    expect(attempted).toEqual(['/env/rclone', path.join('/data', 'engine', 'rclone'), resourcesRclone])
   })
 
   it('builds scheduler commands and protects bisync listing checksums', () => {
