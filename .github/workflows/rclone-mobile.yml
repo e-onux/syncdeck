@@ -72,8 +72,10 @@ jobs:
         run: |
           set -euo pipefail
           go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
-          go get golang.org/x/mobile/bind
           go mod tidy
+          # tidy prunes x/mobile because nothing imports it, but gomobile still
+          # requires it in go.mod, so it has to be added back afterwards.
+          go get golang.org/x/mobile/bind
 
       - name: gomobile bind (ios + simulator)
         working-directory: mobile/engine
@@ -134,8 +136,10 @@ jobs:
         run: |
           set -euo pipefail
           go get github.com/rclone/rclone@v${{ needs.resolve.outputs.version }}
-          go get golang.org/x/mobile/bind
           go mod tidy
+          # tidy prunes x/mobile because nothing imports it, but gomobile still
+          # requires it in go.mod, so it has to be added back afterwards.
+          go get golang.org/x/mobile/bind
 
       - name: gomobile bind (android)
         working-directory: mobile/engine
