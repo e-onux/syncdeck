@@ -6,25 +6,25 @@ Important attribution: `rclone` is an independent open-source project maintained
 
 ## Installing a release
 
-Download the build for your OS from [Releases](https://github.com/e-onux/syncdeck/releases). rclone ships inside the app — no separate install.
+Download the build for your OS from [Releases](https://github.com/e-onux/syncdeck/releases). rclone ships inside the app, no separate install.
 
 Because the app is distributed **unsigned** (free, no Apple Developer account), each OS shows a one-time prompt. macOS builds are ad-hoc signed so the bundle is internally valid, but they are not Apple-notarized:
 
-- **macOS** — if you see *"SyncDeck is damaged and can't be opened"* (German: *"ist beschädigt"*), the file is usually **not** corrupt — it is Gatekeeper quarantine on an unsigned, unnotarized app. Drag the app to `Applications`, then run once:
+- **macOS**, if you see *"SyncDeck is damaged and can't be opened"* (German: *"ist beschädigt"*), the file is usually **not** corrupt, it is Gatekeeper quarantine on an unsigned, unnotarized app. Drag the app to `Applications`, then run once:
   ```bash
   xattr -dr com.apple.quarantine /Applications/SyncDeck.app
   ```
   It then opens normally. The bundled rclone inside the app is un-quarantined by the same recursive command.
-- **Windows** — on *"Windows protected your PC"*, click **More info → Run anyway**.
-- **Linux** — make the AppImage executable (`chmod +x SyncDeck-*.AppImage`) or install the `.deb`.
+- **Windows**, on *"Windows protected your PC"*, click **More info → Run anyway**.
+- **Linux**, make the AppImage executable (`chmod +x SyncDeck-*.AppImage`) or install the `.deb`.
 
 ### Signing & notarization (optional, removes the macOS prompt)
 
-To make macOS downloads open with no command, build with an Apple Developer ID. Add these repo secrets, then wire them as `env` on the bundle step in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (a commented stub marks the spot — they are not wired by default because an empty `CSC_LINK` makes electron-builder abort):
+To make macOS downloads open with no command, build with an Apple Developer ID. Add these repo secrets, then wire them as `env` on the bundle step in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (a commented stub marks the spot, they are not wired by default because an empty `CSC_LINK` makes electron-builder abort):
 
-- `CSC_LINK` — base64 of your Developer ID `.p12`
-- `CSC_KEY_PASSWORD` — the `.p12` password
-- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` — for notarization
+- `CSC_LINK`, base64 of your Developer ID `.p12`
+- `CSC_KEY_PASSWORD`, the `.p12` password
+- `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, for notarization
 
 ## Current Features
 
@@ -37,7 +37,7 @@ To make macOS downloads open with no command, build with an Apple Developer ID. 
 - Native folder picker for local paths; cloud file picker via `rclone lsjson`.
 - Client wizard that creates real remotes:
   - Per-provider field schemas for S3, B2, SFTP, WebDAV, and an encrypted
-    `crypt` remote — passwords stored obscured (`--obscure`).
+    `crypt` remote, passwords stored obscured (`--obscure`).
   - Real OAuth for Drive/Dropbox via `rclone authorize` (browser flow, token
     capture).
   - Connection test (`rclone lsd`, also via on-the-fly connection strings) and
@@ -104,13 +104,17 @@ npm run bundle:linux
 
 Done: provider wizards (Drive, Dropbox, S3, B2, SFTP, WebDAV, crypt) with OAuth
 capture and `--obscure`; copy/sync/move/bisync/check; dry-run, bandwidth, and
-checksum toggles; live progress streaming; `lsjson` picker; `about` quota;
-config create/delete. Still to do:
+checksum toggles; live progress streaming with a real-time per-file log;
+`lsjson` picker; `about` quota; config create/delete; a background scheduler
+(per-profile interval, macOS LaunchAgent daemon that never flashes a Dock tile);
+re-authorization when a token expires (`rclone config reconnect`); an engine
+self-update gated by a compatibility smoke test; and a remote advisory feed.
+Still to do:
 
-- More backends in the wizard (OneDrive, SMB, Proton Drive, Box, pCloud …) and
-  backend-specific flag forms.
+- More backends in the wizard (OneDrive, SMB, Proton Drive, Box, pCloud and so
+  on) with backend-specific flag forms.
 - Long-running `mount` / `serve` with a dedicated daemon panel.
-- Scheduler (interval/cron per profile), job queue, and conflict-policy presets.
+- Job queue and conflict-policy presets.
 - Persistent run/log history and additional ops (`dedupe`, `purge`, `cleanup`,
   `size`).
 
@@ -118,13 +122,13 @@ config create/delete. Still to do:
 
 The interface follows the **Sidre Labs** design system (deep teal-black canvas,
 oblique Archivo headlines, JetBrains Mono labels, mint accent, 2px corners, no
-shadows) — the same language as the product site.
+shadows), the same language as the product site.
 
 - Design source (Claude Design handoff): [`docs/designs/app-ui/`](docs/designs/app-ui/) (`SyncDeck.dc.html` + `_ds/` tokens + chat transcripts).
 - Single-window layout: title bar · profile sidebar · profile editor · global
-  status bar, with overlay surfaces for Settings (Arayüz / İstemciler / Hakkında),
+  status bar, with overlay surfaces for Settings (Interface / Clients / About),
   a 3-step client wizard (live engine-command preview), and a cloud file picker.
-- The UI calls the engine "motor"; rclone is credited only in About.
+- The UI calls rclone "the engine" in normal copy; rclone is credited by name in About.
 - Live status bar, cloud picker, client types and external links are wired to
   real `electron/main.cjs` IPC (progress streaming, `lsjson`, `config dump`,
   `openExternal`). Remaining backend follow-ups: [`docs/todos/01-app-ui.md`](docs/todos/01-app-ui.md).

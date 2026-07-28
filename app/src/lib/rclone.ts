@@ -44,7 +44,7 @@ export function remoteOf(destination: string, remotes: string[]): string {
   return remotes.find((r) => destination.startsWith(r)) || ''
 }
 
-// An rclone remote path looks like "name:" or "name:path" — not a local
+// An rclone remote path looks like "name:" or "name:path", not a local
 // "/Users/…" path nor a Windows "C:\" drive (colon followed by a slash).
 export function looksRemote(path: string): boolean {
   return /^[A-Za-z0-9][\w .+-]*:(?![\\/])/.test(path)

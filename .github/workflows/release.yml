@@ -95,6 +95,6 @@ jobs:
             ```
             Then open SyncDeck normally.
 
-            **Windows** — if "Windows protected your PC" appears, choose **More info → Run anyway**.
+            **Windows**, if "Windows protected your PC" appears, choose **More info → Run anyway**.
 
-            **Linux** — make the AppImage executable with `chmod +x SyncDeck-*.AppImage`, or install the `.deb` package.
+            **Linux**, make the AppImage executable with `chmod +x SyncDeck-*.AppImage`, or install the `.deb` package.

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// SyncDeck MCP server — exposes the rclone-backed engine to LLM agents through a
+// SyncDeck MCP server, exposes the rclone-backed engine to LLM agents through a
 // strict, read-only + dry-run tool set. The security model is the point: a naive
 // "rclone over MCP" is trivial and dangerous, so every agent-supplied value is
 // validated by the SAME policy helpers the GUI uses (shared engine.cjs), there is
 // a remote allowlist, secrets are redacted, and nothing here mutates remote data.
 //
 // Phase 2 (not in this MVP) adds mutating tools (upload/download/run_profile)
-// behind an app-side approval queue — see docs/mcp-server.md.
+// behind an app-side approval queue, see docs/mcp-server.md.
 
 import { createRequire } from 'node:module'
 import { spawn, spawnSync } from 'node:child_process'
@@ -231,7 +231,7 @@ async function main() {
     }
   })
 
-  // stdout is the MCP channel — only diagnostics may go to stderr.
+  // stdout is the MCP channel, only diagnostics may go to stderr.
   process.stderr.write(`syncdeck-mcp: engine=${RCLONE} config=${configPath()} allowlist=${ALLOWED_REMOTES.join(',') || '(all)'}\n`)
   await server.connect(new StdioServerTransport())
 }

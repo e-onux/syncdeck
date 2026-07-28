@@ -1,93 +1,114 @@
-# SyncDeck — Website
+# SyncDeck, website
 
-SyncDeck ürün sitesi. **Hız öncelikli statik mimari**: build aşamasında tek bir
-self-contained `index.html` üretilir, K3s üzerinde RAM'den (tmpfs + page cache)
-precompressed olarak nginx ile servis edilir. Sidre Labs ana sitesiyle **aynı
-teknik**; `sidrelabs.com/syncdeck` alt yolundan yayınlanır.
+The SyncDeck product site. **Speed-first static architecture**: the build emits
+one self-contained `index.html` per language, served precompressed from RAM
+(tmpfs + page cache) by nginx on K3s. Same technique as the main Sidre Labs
+site, published under the `sidrelabs.com/syncdeck` sub-path.
 
-Tasarım Claude Design'da hazırlandı (Sidre Labs tasarım sistemi: koyu teal-siyah
-zemin, Archivo eğik başlıklar, JetBrains Mono etiketler, mint aksan). PHP/Slim
-gibi bir runtime **yoktur** — istek başına render yapılmaz, dosya doğrudan
-bellekten döner.
+The design was prepared in Claude Design (Sidre Labs design system: deep
+teal-black canvas, oblique Archivo headings, JetBrains Mono labels, mint
+accent). There is **no runtime** such as PHP or Slim, nothing is rendered per
+request, the file is returned straight from memory.
 
-## Hız için yapılanlar
+## What makes it fast
 
-| Optimizasyon | Etki |
+| Optimisation | Effect |
 |---|---|
-| CSS + JS + ikonlar **inline** | Tüm sayfa tek istek (~46 KB, gzip **~9.5 KB**), render-blocking link yok |
-| **Self-host fontlar** (`dist/fonts/`, göreli yol) | Google'a 3rd-party round-trip yok; latin alt küme `preload` edilir |
-| **gzip_static** | nginx precompressed `.gz` dosyasını okur, runtime sıkıştırma yok |
-| **open_file_cache** + tmpfs | Dosya fd + içerik RAM'de sıcak kalır |
-| Fingerprint'li fontlar `immutable` cache | Tekrar ziyarette font isteği gitmez |
-| `nginx-unprivileged`, read-only rootfs | Küçük, sertleştirilmiş çalışma imajı (~91 MB) |
+| CSS + JS + icons **inlined** | Whole page in one request (~50 KB, gzip **~11 KB**), no render-blocking links |
+| **Self-hosted fonts** (`dist/fonts/`) | No third-party round trip to Google, the latin subset is `preload`ed |
+| **gzip_static** | nginx reads the precompressed `.gz`, no runtime compression |
+| **open_file_cache** + tmpfs | File descriptors and content stay hot in RAM |
+| Fingerprinted fonts, `immutable` cache | Repeat visits do not re-request fonts |
+| `nginx-unprivileged`, read-only rootfs | Small, hardened runtime image (~91 MB) |
 
-Font URL'leri **göreli** (`fonts/...`) üretilir; böylece aynı `dist/` hem kök
-(`/`) hem de alt yol (`/syncdeck/`) altında çalışır.
+## Languages
 
-## Yapı
+The site ships in the same nine languages as the app: Turkish (default),
+English, German, Spanish, Dutch, Russian, Chinese, Japanese and Arabic.
+
+- All copy lives in [`src/i18n.mjs`](src/i18n.mjs). Every locale must define the
+  same keys, the build fails otherwise, so a page can never ship `{{holes}}`.
+- `build.mjs` renders one static page per language: `dist/index.html` is the
+  default (tr) and `dist/<lang>/index.html` holds the rest.
+- **nginx picks the language from the browser's `Accept-Language` header**
+  (see the `map` block in `nginx.conf`), so there is no redirect and no
+  client-side detection: the first byte is already in the right language.
+  Unsupported languages fall back to the default.
+- Explicit URLs such as `/syncdeck/en/` always win over negotiation and are what
+  the footer language switcher links to. `hreflang` and `canonical` are emitted
+  for every locale, and Arabic renders with `dir="rtl"`.
+- Font URLs are **absolute** (`/syncdeck/fonts/...`) so one shared font
+  directory works at every URL depth. Set `BASE_PATH=/` to build for the root,
+  which is what `npm run preview` does.
+
+## Layout
 
 ```
 website/
-├── src/                 # düzenlenebilir kaynak (standalone da çalışır)
-│   ├── index.html
-│   ├── styles.css       # Sidre token'ları + bileşenler + sayfa stilleri
-│   └── main.js          # footer yılı (kasıtlı olarak minik)
-├── build.mjs            # inline + minify + font self-host + gzip → dist/
-├── package.json         # tek devDependency: esbuild
-├── nginx.conf           # /syncdeck/ alt yolu, gzip_static, cache, headers
-├── Dockerfile           # 2 aşama: node build → nginx-unprivileged
+├── src/
+│   ├── index.html       # template with {{placeholders}}
+│   ├── i18n.mjs         # all copy, one entry per language
+│   ├── styles.css       # Sidre tokens + components + page styles
+│   └── main.js          # footer year + rotating hero word (deliberately tiny)
+├── build.mjs            # render per language + inline + minify + fonts + gzip
+├── package.json         # single devDependency: esbuild
+├── nginx.conf           # /syncdeck/ sub-path, Accept-Language map, gzip_static
+├── Dockerfile           # 2 stages: node build → nginx-unprivileged
 └── k8s/                 # Deployment (tmpfs/RAM) + Service + Ingress (/syncdeck)
     └── kustomization.yaml
 ```
 
-## Geliştirme
+## Development
 
 ```bash
 npm install
-npm run build          # → dist/  (font self-host için internet ister; yoksa CDN fallback)
-npm run preview        # build + http://localhost:8080  (dist'i kökten servis eder)
+npm run build          # → dist/  (needs the network to self-host fonts, CDN fallback otherwise)
+npm run preview        # build for the root + http://localhost:8080
 ```
 
-## Build & deploy (K3s — sidrelabs.com/syncdeck)
+## Build and deploy (K3s, sidrelabs.com/syncdeck)
 
-Canlı: **https://sidrelabs.com/syncdeck/**. Ana site (`sidrelabs-web`) ile aynı
-sunucu, aynı `sidrelabs-web` namespace'i ve aynı yöntem: imaj **registry'siz**,
-doğrudan k3s containerd'ye import edilir (`sidrelabs-web:1` ile birebir aynı
-mantık). Sunucuda registry yok; `imagePullPolicy: IfNotPresent`.
+Live at **https://sidrelabs.com/syncdeck/**. Same server, same `sidrelabs-web`
+namespace and same method as the main site: the image is imported straight into
+k3s containerd **without a registry** (identical to how `sidrelabs-web:1` is
+loaded). There is no registry on the server, so `imagePullPolicy: IfNotPresent`.
 
 ```bash
-# 1. imajı sunucu mimarisi (amd64) için build et ve tar'a kaydet
-docker build --platform linux/amd64 --provenance=false -t syncdeck-web:1 .
-docker save syncdeck-web:1 -o /tmp/syncdeck-web.tar
+# 1. build for the server architecture (amd64) and save it to a tar
+docker build --platform linux/amd64 --provenance=false -t syncdeck-web:4 .
+docker save syncdeck-web:4 -o /tmp/syncdeck-web.tar
 
-# 2. tar'ı sunucuya kopyala ve k3s containerd'ye import et
-scp /tmp/syncdeck-web.tar root@<sunucu>:/tmp/
-ssh root@<sunucu> 'k3s ctr images import /tmp/syncdeck-web.tar'
+# 2. copy the tar to the server and import it into k3s containerd
+scp /tmp/syncdeck-web.tar root@<server>:/tmp/
+ssh root@<server> 'k3s ctr images import /tmp/syncdeck-web.tar'
 
-# 3. manifestleri uygula (tag'i bump ettiysen k8s/kustomization.yaml newTag'i güncelle)
-scp k8s/*.yaml root@<sunucu>:/tmp/syncdeck-k8s/
-ssh root@<sunucu> 'kubectl apply -k /tmp/syncdeck-k8s/'
+# 3. apply the manifests (bump newTag in k8s/kustomization.yaml when the tag changes)
+scp k8s/*.yaml root@<server>:/tmp/syncdeck-k8s/
+ssh root@<server> 'kubectl apply -k /tmp/syncdeck-k8s/'
 ```
 
-> Yeni sürümde `:1` → `:2` gibi tag'i bump et, yeniden import et ve
-> `kustomization.yaml` newTag'i güncelle (IfNotPresent eski imajı tutar).
+> For a new release bump the tag (`:4` → `:5`), re-import, and update `newTag` in
+> `kustomization.yaml`. `IfNotPresent` would otherwise keep the old image.
 
-### Notlar / varsayımlar
-- Site `/syncdeck/` alt yolu altında servis edilir; `nginx.conf` içeriği
-  `/usr/share/nginx/html/syncdeck/` altına kopyalanır. Kök (`/`) ziyaretleri
-  `/syncdeck/`'e yönlendirilir.
-- `k8s/ingress.yaml` ana site (`sidrelabs-web`) ile **aynı host'u** paylaşır:
-  Traefik daha uzun path prefix'i önceliklendirir, yani `/syncdeck` →
-  `syncdeck-web`, `/` → `sidrelabs-web`. Ingress backend'leri aynı namespace'te
-  olmalı; bu yüzden `kustomization.yaml` namespace `sidrelabs-web`.
-- K3s varsayılanı **Traefik** + cert-manager/`le` resolver varsayılır
-  (sidrelabs-web ile aynı annotation'lar). ingress-nginx kullanıyorsan
-  `ingressClassName` ve annotation'ları + bir `rewrite-target` ayarla.
-- Deployment site'ı bir `emptyDir{medium:Memory}` (tmpfs) hacmine kopyalayıp
-  oradan servis eder; istekler garantili olarak RAM'den döner.
+### Notes and assumptions
+- The site is served under the `/syncdeck/` sub-path, its content is copied to
+  `/usr/share/nginx/html/syncdeck/`. Visits to the root (`/`) are redirected to
+  `/syncdeck/`.
+- `k8s/ingress.yaml` shares the **same host** as the main site
+  (`sidrelabs-web`): Traefik prefers the longer path prefix, so `/syncdeck` goes
+  to `syncdeck-web` and `/` goes to `sidrelabs-web`. Ingress backends must live
+  in the same namespace, which is why `kustomization.yaml` sets namespace
+  `sidrelabs-web`.
+- The K3s default of **Traefik** plus cert-manager or the `le` resolver is
+  assumed (same annotations as sidrelabs-web). With ingress-nginx you need to
+  set `ingressClassName`, its annotations and a `rewrite-target`.
+- The Deployment copies the site into an `emptyDir{medium:Memory}` (tmpfs)
+  volume and serves from there, so requests are guaranteed to come from RAM.
 
-## İçerik düzenleme
+## Editing content
 
-Metinler `src/index.html` içinde (Türkçe). Hero'daki dönen kelime şeridi
-(`sessizce → güvenle → …`) ve aksan rengi `src/styles.css` içindedir.
-Değişiklikten sonra `npm run build`.
+All text lives in [`src/i18n.mjs`](src/i18n.mjs), keyed per language. The
+rotating hero words (`sessizce → güvenle → …`) are the `heroWords` array of each
+locale, and the accent colour is in `src/styles.css`. Run `npm run build` after
+any change. The version string is templated from `package.json` as `{version}`,
+so it only needs bumping in one place.

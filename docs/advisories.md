@@ -3,7 +3,7 @@
 SyncDeck polls a small JSON file every 6 hours and shows a dismissible banner for
 each advisory that applies to the running install. This lets us warn users about
 provider/API breakage (e.g. an OneDrive change that needs a newer rclone) **without
-shipping a new app build** — we just edit `advisories.json` on `main`.
+shipping a new app build**, we just edit `advisories.json` on `main`.
 
 - **Live feed:** `advisories.json` at the repo root, served via
   `https://raw.githubusercontent.com/e-onux/syncdeck/main/advisories.json`.
@@ -39,7 +39,7 @@ An advisory is shown when **all** hold:
 
 1. It has an `id` and the user hasn't dismissed it.
 2. Its `providers` filter (if present) intersects the configured client types.
-3. Its version gate triggers — i.e. the installed `rclone`/app version is **older**
+3. Its version gate triggers, i.e. the installed `rclone`/app version is **older**
    than `minRcloneVersion`/`minAppVersion`. With no version fields it's a plain notice.
    Version-gated advisories are **hidden when the version is unknown**, so a missing
    engine never produces a false "please update" alarm.

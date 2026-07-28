@@ -1,5 +1,5 @@
 /* ============================================================
-   SYNCDECK — desktop app, Sidre Labs dark theme
+   SYNCDECK, desktop app, Sidre Labs dark theme
    Deep teal-black canvas · oblique Archivo headings · JetBrains
    Mono labels · mint accent · 2px corners · no drop shadows.
    ============================================================ */
@@ -509,7 +509,7 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-schedbtn.is-active { color: var(--ink); border-color: var(--accent); background: color-mix(in oklch, var(--accent) 12%, transparent); }
 
 /* ============================================================
-   LIGHT THEME — light teal-tinted canvas, dark ink, same mint
+   LIGHT THEME, light teal-tinted canvas, dark ink, same mint
    accent. Approximation of the Sidre light palette; the inline
    --accent (user's pick) stays, so accent-ink remains dark.
    ============================================================ */

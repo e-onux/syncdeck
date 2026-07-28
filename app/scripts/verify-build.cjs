@@ -11,21 +11,21 @@ const errors = [];
 
 const indexPath = path.join(root, 'dist', 'index.html');
 if (!fs.existsSync(indexPath)) {
-  errors.push('dist/index.html missing — run `npm run build` first.');
+  errors.push('dist/index.html missing, run `npm run build` first.');
 } else {
   const html = fs.readFileSync(indexPath, 'utf8');
   const absolute = [...html.matchAll(/(?:src|href)="(\/[^"]*\.(?:js|css))"/g)].map((m) => m[1]);
   if (absolute.length) {
     errors.push(
       `dist/index.html references absolute asset paths (${absolute.join(', ')}). ` +
-        'Electron loads the bundle via file:// and needs relative paths — keep `base: "./"` in vite.config.ts.',
+        'Electron loads the bundle via file:// and needs relative paths, keep `base: "./"` in vite.config.ts.',
     );
   }
 }
 
 const icon = path.join(root, 'build', 'icon.icns');
 if (!fs.existsSync(icon)) {
-  errors.push('build/icon.icns missing — the packaged app would use the default Electron icon.');
+  errors.push('build/icon.icns missing, the packaged app would use the default Electron icon.');
 }
 
 if (errors.length) {

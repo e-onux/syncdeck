@@ -99,7 +99,7 @@ const demoState = (overrides: Partial<AppState> = {}): AppState => ({
 
 // Browser-demo only: a fake progress stream so the live log, transfer bars and
 // stop flow are demonstrable without a real rclone (the Electron app streams the
-// real thing). Harmless in production — window.rcloneSyncer wins over demoApi.
+// real thing). Harmless in production, window.rcloneSyncer wins over demoApi.
 let demoProgressCb: ((data: SyncProgress) => void) | null = null
 let demoCancelled = false
 function demoSimulate(id: string) {
@@ -311,7 +311,7 @@ const tr = {
   tabAbout: 'Hakkında',
   aboutTitle: 'Açık kaynak hakkında',
   aboutBody:
-    'SyncDeck, bağımsız açık kaynak rclone projesinin grafik bir sarmalayıcısıdır (wrapper). Tüm aktarımlar arka planda rclone komut satırı motoruyla yürütülür; SyncDeck yalnızca onu kullanışlı bir arayüzle sunar. rclone uygulamayla birlikte paketlenir — ayrıca kurman gerekmez.',
+    'SyncDeck, bağımsız açık kaynak rclone projesinin grafik bir sarmalayıcısıdır (wrapper). Tüm aktarımlar arka planda rclone komut satırı motoruyla yürütülür; SyncDeck yalnızca onu kullanışlı bir arayüzle sunar. rclone uygulamayla birlikte paketlenir, ayrıca kurman gerekmez.',
   version: (v: string) => `Sürüm ${v} · sidrelabs.com/syncdeck`,
   wizStepOf: (n: number) => `Yeni istemci · adım ${n}/3`,
   wizStep1: 'Bağlantı türü',
@@ -403,7 +403,7 @@ const en: Copy = {
   mirror: 'Mirror sync',
   copyOnly: 'Copy only',
   mirrorDesc: 'Mirrors the destination to the source. Files not in the source are deleted at the destination.',
-  copyDesc: 'Only adds files, deletes nothing. Safe — no irreversible data loss.',
+  copyDesc: 'Only adds files, deletes nothing. Safe, no irreversible data loss.',
   moveTitle: 'Move',
   moveDesc: 'Moves files to the destination; successfully transferred files are removed from the source.',
   bisyncTitle: 'Bi-directional',
@@ -460,7 +460,7 @@ const en: Copy = {
   tabAbout: 'About',
   aboutTitle: 'About open source',
   aboutBody:
-    'SyncDeck is a graphical wrapper for the independent open-source rclone project. Every transfer runs on the rclone command-line engine in the background; SyncDeck just presents it with a friendly interface. rclone ships bundled with the app — no separate install needed.',
+    'SyncDeck is a graphical wrapper for the independent open-source rclone project. Every transfer runs on the rclone command-line engine in the background; SyncDeck just presents it with a friendly interface. rclone ships bundled with the app, no separate install needed.',
   version: (v) => `Version ${v} · sidrelabs.com/syncdeck`,
   wizStepOf: (n) => `New client · step ${n}/3`,
   wizStep1: 'Connection type',
@@ -1200,7 +1200,7 @@ const ru: Copy = {
   tabAbout: 'О программе',
   aboutTitle: 'Об открытом коде',
   aboutBody:
-    'SyncDeck — графическая оболочка для независимого open-source проекта rclone. Все передачи выполняются в фоне через командный движок rclone; SyncDeck лишь предоставляет удобный интерфейс. rclone поставляется вместе с приложением, отдельная установка не требуется.',
+    'SyncDeck, графическая оболочка для независимого open-source проекта rclone. Все передачи выполняются в фоне через командный движок rclone; SyncDeck лишь предоставляет удобный интерфейс. rclone поставляется вместе с приложением, отдельная установка не требуется.',
   version: (v) => `Версия ${v} · sidrelabs.com/syncdeck`,
   wizStepOf: (n) => `Новый клиент · шаг ${n}/3`,
   wizStep1: 'Тип подключения',
@@ -2717,7 +2717,7 @@ function App() {
                                 <span className="sd-clientrow__icon"><ProviderGlyph id={c.type} size={22} /></span>
                                 <div className="sd-clientrow__text">
                                   <div className="sd-clientrow__name">{clientLabel(c.name)}</div>
-                                  <div className="sd-clientrow__type">{c.type || '—'} · {c.name}</div>
+                                  <div className="sd-clientrow__type">{c.type || '-'} · {c.name}</div>
                                   {about?.supported && about.free && !alert && (
                                     <div className="sd-clientrow__quota">{about.free} {t.quotaFree}{about.total ? ` / ${about.total}` : ''}</div>
                                   )}
@@ -2759,7 +2759,7 @@ function App() {
                       <div className="sl-card sd-about__card">
                         <div className="sd-about__cardlabel">{t.engineLabel}</div>
                         <div className="sd-engine-row">
-                          <div className="sd-engine-ver">rclone {state?.rcloneVersion || '—'}</div>
+                          <div className="sd-engine-ver">rclone {state?.rcloneVersion || '-'}</div>
                           <div className="sd-engine-actions">
                             {engineBusy ? (
                               <span className="sd-engine-status">{t.engineUpdating}</span>
@@ -2982,7 +2982,7 @@ function StatusBar({
       ? progress.totalFiles
         ? `${progress.files} / ${progress.totalFiles}`
         : String(progress.files)
-      : '—'
+      : '-'
   return (
     <footer className="sd-status">
       <div className="sd-status__seg">
@@ -3003,18 +3003,18 @@ function StatusBar({
             </span>
           ))}
         </div>
-        <div><div className="sd-status__cap">{t.speed}</div><div className="sd-status__val ac">{running ? progress?.speed || '—' : '—'}</div></div>
+        <div><div className="sd-status__cap">{t.speed}</div><div className="sd-status__val ac">{running ? progress?.speed || '-' : '-'}</div></div>
       </div>
       <div className="sd-status__progress">
         <div className="sd-status__bar-row">
-          <span>{running ? `${progress?.transferred || '0'} / ${progress?.total || '—'}` : '—'}</span>
+          <span>{running ? `${progress?.transferred || '0'} / ${progress?.total || '-'}` : '-'}</span>
           <span className="muted">{running ? `${pct}%` : ''}</span>
         </div>
         <div className="sd-status__track"><div className="sd-status__fill" style={{ width: `${running ? pct : 0}%` }} /></div>
       </div>
       <div className="sd-status__stats">
         <div className="sd-status__stat"><div className="sd-status__cap">{t.files}</div><div className="sd-status__val">{filesText}</div></div>
-        <div className="sd-status__stat"><div className="sd-status__cap">{t.eta}</div><div className="sd-status__val">{running ? progress?.eta || '—' : '—'}</div></div>
+        <div className="sd-status__stat"><div className="sd-status__cap">{t.eta}</div><div className="sd-status__val">{running ? progress?.eta || '-' : '-'}</div></div>
       </div>
     </footer>
   )

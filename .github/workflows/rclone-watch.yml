@@ -1,7 +1,7 @@
 name: rclone watch
 
 # Watches upstream rclone and, when a newer stable release appears, records it,
-# bumps the app patch version and pushes a tag — which triggers release.yml to
+# bumps the app patch version and pushes a tag, which triggers release.yml to
 # rebuild SyncDeck bundling the fresh engine. This is the "haber al + otomatik
 # release" half of the staleness strategy; the in-app advisory feed is the other.
 on:

@@ -9,10 +9,10 @@ an update; the advisory banner's **Update engine** button does the same.
 
 Flow (`app/electron/main.cjs` → `updateRcloneEngine`):
 
-1. `rclone selfupdate --output <userData>/engine/rclone-staged` — rclone downloads
+1. `rclone selfupdate --output <userData>/engine/rclone-staged`, rclone downloads
    the latest stable build and **verifies it itself** (hashsum + cryptographic
    signature).
-2. macOS: ad-hoc sign (`codesign --force --sign -`) + strip quarantine — the new
+2. macOS: ad-hoc sign (`codesign --force --sign -`) + strip quarantine, the new
    binary lives *outside* the signed app bundle, so this never invalidates the
    bundle's signature (the cause of the old "is damaged" Gatekeeper error).
 3. **Compatibility smoke test** (`smokeTestRclone` + `ENGINE_SMOKE_CHECKS`): the
@@ -24,11 +24,11 @@ Flow (`app/electron/main.cjs` → `updateRcloneEngine`):
 
 `resetEngine` deletes the managed copy to fall back to the bundled binary.
 
-## 2. CI auto-release (keeps new installs fresh) — `.github/workflows/rclone-watch.yml`
+## 2. CI auto-release (keeps new installs fresh), `.github/workflows/rclone-watch.yml`
 
 Daily, the workflow compares `https://downloads.rclone.org/version.txt` with
 `app/rclone.version`. When upstream is newer it records the version, bumps the app
-patch version, commits, and pushes a `v*` tag — which triggers `release.yml` to
+patch version, commits, and pushes a `v*` tag, which triggers `release.yml` to
 rebuild SyncDeck bundling the fresh engine.
 
 ### Required secret: `RELEASE_PAT`

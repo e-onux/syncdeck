@@ -9,7 +9,7 @@ Desktop registration. This doc records the architecture and the phase-2 plan.
 The engine logic SyncDeck depends on was already extracted into pure helpers
 (`app/electron/lib/engine.cjs`). The MCP server imports those directly, so the
 GUI and the agent path share **one** implementation of arg-safety, remote-path
-validation and secret redaction — they can't drift, which matters because a
+validation and secret redaction, they can't drift, which matters because a
 divergent escaper is a security hole.
 
 ```
@@ -30,14 +30,14 @@ risk, immediately useful ("what's in my Drive / what would this sync do").
 
 ## Phase 2 (planned): mutating tools behind app-side approval
 
-The hard part of a *safe* MCP is not the tools — it's **where the human approval
+The hard part of a *safe* MCP is not the tools, it's **where the human approval
 lives**. MCP tool calls are non-interactive, so a destructive tool can't just
 "pop a dialog". Two options:
 
 1. Rely on the MCP client's own per-tool approval (simple, but a misconfigured /
    auto-approving client bypasses it).
 2. **App-side approval queue (preferred):** the MCP server does not execute a
-   destructive op directly — it enqueues a pending action that surfaces in the
+   destructive op directly, it enqueues a pending action that surfaces in the
    SyncDeck GUI, the user approves it there, and the tool returns "pending,
    id X" with a `get_action_status` poll. This is the same "GUI is the source of
    truth" model as the rest of the app and can't be auto-approved away.

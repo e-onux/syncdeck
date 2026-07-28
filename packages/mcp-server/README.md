@@ -5,7 +5,7 @@ LLM agents (Claude Desktop, Claude Code, …) through a **read-only + dry-run** 
 set. The value here is the **policy layer**, not the tools: a naive "rclone over
 MCP" is trivial and dangerous, so this server is safe-by-construction.
 
-## Tools (MVP — phase 1)
+## Tools (MVP, phase 1)
 
 | Tool | Effect |
 | --- | --- |
@@ -19,7 +19,7 @@ MCP" is trivial and dangerous, so this server is safe-by-construction.
 
 Every tool is read-only or dry-run. Mutating tools (upload/download/run_profile,
 create/delete remote) are **phase 2** and will route through an app-side approval
-queue — see `docs/mcp-server.md`.
+queue, see `docs/mcp-server.md`.
 
 ## Security model
 

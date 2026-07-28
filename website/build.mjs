@@ -7,7 +7,7 @@
  *
  *   - CSS + JS minified and inlined (one request, zero render-blocking links)
  *   - web fonts self-hosted once into dist/fonts and referenced with an
- *     ABSOLUTE path (BASE_PATH) so the same markup works at any URL depth —
+ *     ABSOLUTE path (BASE_PATH) so the same markup works at any URL depth -
  *     required now that pages live at /syncdeck/ and /syncdeck/<lang>/
  *   - <link rel="preload"> for the latin subset
  *   - canonical + hreflang alternates for every locale
@@ -96,8 +96,8 @@ function assertLocalesComplete() {
     if (missing.length || extra.length) {
       throw new Error(
         `locale "${lang}" is out of sync` +
-          (missing.length ? ` — missing: ${missing.join(', ')}` : '') +
-          (extra.length ? ` — unexpected: ${extra.join(', ')}` : ''),
+          (missing.length ? `, missing: ${missing.join(', ')}` : '') +
+          (extra.length ? `, unexpected: ${extra.join(', ')}` : ''),
       );
     }
   }

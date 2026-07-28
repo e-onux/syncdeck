@@ -157,7 +157,7 @@ function detectAuthError(text) {
   return AUTH_ERROR_PATTERNS.some((re) => re.test(clean));
 }
 
-// The first non-empty, human-meaningful line of an error blob — used as the
+// The first non-empty, human-meaningful line of an error blob, used as the
 // short message shown next to the "re-authorize" prompt.
 function firstMeaningfulLine(text) {
   const lines = stripAnsi(text)
@@ -172,7 +172,7 @@ function firstMeaningfulLine(text) {
 
 // ---- MCP policy layer (shared so the GUI and MCP paths can't drift) ----
 
-// Flags an MCP/agent caller must never be able to inject — they can redirect
+// Flags an MCP/agent caller must never be able to inject, they can redirect
 // config, impersonate, exfiltrate via remote control, or read from arbitrary
 // list files. Reused by the MCP server when sanitizing a profile's extraArgs.
 const MCP_DENIED_FLAGS = [
@@ -250,7 +250,7 @@ function redactConfigDump(dump) {
 
 // rclone commands + flags SyncDeck depends on. A freshly self-updated engine
 // must still expose all of these (verified via each command's --help) before we
-// promote it — the compatibility smoke test the user asked for.
+// promote it, the compatibility smoke test the user asked for.
 const ENGINE_SMOKE_CHECKS = [
   // Global flags live under `rclone help flags`, not the per-command help.
   { args: ['help', 'flags'], needles: ['--use-json-log', '--stats', '--auto-confirm'] },
@@ -290,7 +290,7 @@ function compareVersions(a, b) {
 // Decide which remote advisories apply right now. An advisory is shown when:
 //  - it has an id and isn't dismissed, and
 //  - its provider filter (if any) intersects the configured providers, and
-//  - its version gate (minRcloneVersion / minAppVersion) triggers — i.e. the
+//  - its version gate (minRcloneVersion / minAppVersion) triggers, i.e. the
 //    installed version is OLDER. With no version fields it's a plain notice.
 // Version-gated advisories are hidden when the relevant version is unknown, so a
 // missing engine never produces a false "please update" alarm.

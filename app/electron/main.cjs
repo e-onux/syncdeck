@@ -120,7 +120,7 @@ function managedRclonePath() {
   }
 }
 
-// Cross-platform "is this an executable we can run?" — checks the exec bit on
+// Cross-platform "is this an executable we can run?", checks the exec bit on
 // posix and existence on Windows (where X_OK is not meaningful).
 function isUsable(file) {
   if (!file) return false;
@@ -232,7 +232,7 @@ async function flagAuthAlert(profile, message) {
 }
 
 // Drop auth alerts for the remotes a profile touches (after a successful run or
-// a successful reconnect — auth is healthy again).
+// a successful reconnect, auth is healthy again).
 async function clearAuthAlertsForProfile(profile) {
   const names = remoteNamesFromProfile(profile);
   if (!names.length) return;
@@ -312,7 +312,7 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
 
     const pushLog = (text) => {
       logLines.push(text);
-      // Keep the live log bounded — the renderer shows the tail.
+      // Keep the live log bounded, the renderer shows the tail.
       if (logLines.length > 400) logLines.splice(0, logLines.length - 400);
     };
 
@@ -323,7 +323,7 @@ async function runRcloneProfile(profile, onProgress, jobControl) {
       try {
         entry = JSON.parse(trimmed);
       } catch {
-        // Non-JSON line (e.g. a stray banner) — keep it verbatim.
+        // Non-JSON line (e.g. a stray banner), keep it verbatim.
         pushLog(trimmed);
         const fallback = parseStats(trimmed);
         if (fallback && typeof onProgress === 'function') onProgress(fallback);
@@ -486,7 +486,7 @@ async function fetchLatestRcloneVersion() {
 
 // Compatibility gate: a freshly downloaded engine must run AND still expose every
 // command/flag SyncDeck depends on (see ENGINE_SMOKE_CHECKS) before we trust it.
-// This is the "uyumluluk kontrolü" — verifying via real --help parameter checks.
+// This is the "uyumluluk kontrolü", verifying via real --help parameter checks.
 async function smokeTestRclone(binPath) {
   try {
     const versionOut = await execCapture(binPath, ['version'], { timeoutMs: 15000 });
@@ -722,7 +722,7 @@ async function createRemote(remoteInput) {
   for (const option of remote.options) {
     args.push(option.key, option.value);
   }
-  // An OAuth token captured by the wizard — store it and skip the local browser flow.
+  // An OAuth token captured by the wizard, store it and skip the local browser flow.
   if (remote.token) args.push('token', remote.token, 'config_is_local', 'false');
   args.push(...splitArgs(remote.extraArgs));
   // Store any password-type fields obscured (rclone's expected format).
@@ -850,7 +850,7 @@ async function reconnectRemote(name) {
     child.on('close', async (code) => {
       runningJobs.delete('__reconnect__');
       if (code === 0) {
-        // Auth is healthy again — clear any pending alert for this remote.
+        // Auth is healthy again, clear any pending alert for this remote.
         const config = await readConfig();
         if (config.authAlerts && config.authAlerts[clean]) {
           delete config.authAlerts[clean];
@@ -952,7 +952,7 @@ async function setLaunchAgent(enabled) {
   const argsXml = programArguments.map((arg) => `    <string>${plistEscape(arg)}</string>`).join('\n');
   const logPath = path.join(app.getPath('userData'), 'scheduler.log');
   // Runs at login and then every SCHEDULER_TICK_SECONDS, even when the UI is
-  // closed — the background "daemon". Each run executes only due profiles.
+  // closed, the background "daemon". Each run executes only due profiles.
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">

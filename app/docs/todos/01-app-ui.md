@@ -5,14 +5,14 @@ The Sidre-dark UI redesign wired to real Electron IPC. The following main-proces
 follow-ups that would deepen the live experience.
 
 ## Done in this change (electron/main.cjs + preload.cjs + types.d.ts)
-- `sync:progress` event — `runRcloneProfile` now streams parsed
+- `sync:progress` event, `runRcloneProfile` now streams parsed
   `--stats-one-line` output (`pct`, `speed`, `eta`, `transferred`, `total`) to
   the renderer during a run; the status bar reads it live.
-- `remote:list` (`rclone lsjson remote:path`) — backs the cloud file picker
+- `remote:list` (`rclone lsjson remote:path`), backs the cloud file picker
   (folder/file listing, breadcrumb navigation).
-- `clients` in `app:get-state` (`rclone config dump`) — name + type for the
+- `clients` in `app:get-state` (`rclone config dump`), name + type for the
   client chips and the Settings → Clients list.
-- `open:external` (`shell.openExternal`) — the About tab links.
+- `open:external` (`shell.openExternal`), the About tab links.
 
 ## Done in the "make everything work" pass
 
@@ -52,9 +52,9 @@ follow-ups that would deepen the live experience.
   humanized free/total quota per client (graceful when a backend has no `about`).
 
 ## Remaining roadmap (larger, separate surfaces)
-- `mount` / `serve` — long-running daemons; need a dedicated panel with
+- `mount` / `serve`, long-running daemons; need a dedicated panel with
   start/stop and mount-point management (different from one-shot profiles).
-- Scheduler — per-profile interval/cron scheduling beyond launch-at-login.
-- Persistent run/log history — a browsable list of past runs (currently only
+- Scheduler, per-profile interval/cron scheduling beyond launch-at-login.
+- Persistent run/log history, a browsable list of past runs (currently only
   the latest run per profile is kept).
 - Per-remote reachability polling on launch; `dedupe` / `purge` / `cleanup`.

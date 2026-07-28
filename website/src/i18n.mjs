@@ -1,7 +1,7 @@
 /**
  * SyncDeck site copy, one entry per language the desktop app ships.
  *
- * Values may contain a little inline HTML (<strong>, <b>, <a>) — they are
+ * Values may contain a little inline HTML (<strong>, <b>, <a>), they are
  * inserted into the template verbatim, so keep them trusted and well-formed.
  * `{version}` is substituted at build time from website/package.json.
  *
@@ -16,10 +16,10 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · Klasörlerini sessizce senkronize et',
     description:
-      'SyncDeck · rclone için sakin bir masaüstü arayüzü. Herhangi bir yerel klasörü dilediğin buluta mount etmeden eşitle — ayna sync ya da güvenli kopyala. macOS, Windows ve Linux.',
+      'SyncDeck · rclone için sakin bir masaüstü arayüzü. Herhangi bir yerel klasörü dilediğin buluta mount etmeden eşitle, ayna sync ya da güvenli kopyala. macOS, Windows ve Linux.',
     ogTitle: 'SyncDeck · Klasörlerini sessizce senkronize et',
     ogDescription:
-      'rclone için sakin bir masaüstü arayüzü. Mount etmeden eşitle — ayna sync ya da güvenli kopyala.',
+      'rclone için sakin bir masaüstü arayüzü. Mount etmeden eşitle, ayna sync ya da güvenli kopyala.',
 
     navFeatures: 'Özellikler',
     navModes: 'Modlar',
@@ -87,18 +87,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'İki mod',
-    modesH2: 'Yansıt ya da koru — kararı sen ver.',
+    modesH2: 'Yansıt ya da koru, kararı sen ver.',
     mode1Title: 'Ayna sync',
     mode1Body:
-      'Hedefi kaynakla birebir aynı hale getirir. Kaynakta olmayan dosyalar hedefte de silinir — tam bir yansıma istediğinde.',
+      'Hedefi kaynakla birebir aynı hale getirir. Kaynakta olmayan dosyalar hedefte de silinir, tam bir yansıma istediğinde.',
     mode2Title: 'Sadece kopyala',
     mode2Body:
-      'Dosyaları hedefe ekler, hiçbir şeyi silmez. Daha temkinli kullanım için güvenli seçim — geri dönüşsüz veri kaybı riski yok.',
+      'Dosyaları hedefe ekler, hiçbir şeyi silmez. Daha temkinli kullanım için güvenli seçim, geri dönüşsüz veri kaybı riski yok.',
 
     dlKicker: 'İndir',
     dlH2: 'Her masaüstünde çalışır.',
     dlLede:
-      'Sürüm {version} · bağımsız derlemeler. <span class="ac">Motor dahili gelir — ayrıca kurulum gerekmez.</span>',
+      'Sürüm {version} · bağımsız derlemeler. <span class="ac">Motor dahili gelir, ayrıca kurulum gerekmez.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -121,9 +121,9 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · Sync your folders quietly',
     description:
-      'SyncDeck · a calm desktop interface for rclone. Sync any local folder to any cloud without mounting — mirror sync or safe copy. macOS, Windows and Linux.',
+      'SyncDeck · a calm desktop interface for rclone. Sync any local folder to any cloud without mounting, mirror sync or safe copy. macOS, Windows and Linux.',
     ogTitle: 'SyncDeck · Sync your folders quietly',
-    ogDescription: 'A calm desktop interface for rclone. Sync without mounting — mirror sync or safe copy.',
+    ogDescription: 'A calm desktop interface for rclone. Sync without mounting, mirror sync or safe copy.',
 
     navFeatures: 'Features',
     navModes: 'Modes',
@@ -169,7 +169,7 @@ export const LOCALES = {
     f2Title: 'Mirror sync &amp; copy',
     f2Kicker: 'Full control',
     f2Body:
-      'Mirror the target exactly, or only add files. Nothing is deleted unexpectedly — you stay in control.',
+      'Mirror the target exactly, or only add files. Nothing is deleted unexpectedly, you stay in control.',
     f2Tag: 'Mode',
     f3Title: 'Automatic at login',
     f3Kicker: 'Set and forget',
@@ -191,18 +191,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'Two modes',
-    modesH2: 'Mirror it or preserve it — your call.',
+    modesH2: 'Mirror it or preserve it, your call.',
     mode1Title: 'Mirror sync',
     mode1Body:
-      'Makes the target identical to the source. Files missing from the source are deleted at the target too — for when you want an exact reflection.',
+      'Makes the target identical to the source. Files missing from the source are deleted at the target too, for when you want an exact reflection.',
     mode2Title: 'Copy only',
     mode2Body:
-      'Adds files to the target and deletes nothing. The safe choice for more cautious use — no risk of irreversible data loss.',
+      'Adds files to the target and deletes nothing. The safe choice for more cautious use, no risk of irreversible data loss.',
 
     dlKicker: 'Download',
     dlH2: 'Runs on every desktop.',
     dlLede:
-      'Version {version} · standalone builds. <span class="ac">The engine is bundled — no separate install needed.</span>',
+      'Version {version} · standalone builds. <span class="ac">The engine is bundled, no separate install needed.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -225,10 +225,10 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · Synchronisiere deine Ordner leise',
     description:
-      'SyncDeck · eine ruhige Desktop-Oberfläche für rclone. Synchronisiere jeden lokalen Ordner mit jeder Cloud, ohne zu mounten — Spiegel-Sync oder sicheres Kopieren. macOS, Windows und Linux.',
+      'SyncDeck · eine ruhige Desktop-Oberfläche für rclone. Synchronisiere jeden lokalen Ordner mit jeder Cloud, ohne zu mounten, Spiegel-Sync oder sicheres Kopieren. macOS, Windows und Linux.',
     ogTitle: 'SyncDeck · Synchronisiere deine Ordner leise',
     ogDescription:
-      'Eine ruhige Desktop-Oberfläche für rclone. Synchronisieren ohne Mounten — Spiegel-Sync oder sicheres Kopieren.',
+      'Eine ruhige Desktop-Oberfläche für rclone. Synchronisieren ohne Mounten, Spiegel-Sync oder sicheres Kopieren.',
 
     navFeatures: 'Funktionen',
     navModes: 'Modi',
@@ -240,7 +240,7 @@ export const LOCALES = {
     heroTitlePost: '',
     heroWords: ['leise', 'sicher', 'clever', 'schnell', 'mühelos', 'vollständig', 'entspannt'],
     heroLede:
-      'Synchronisiere jeden lokalen Ordner mit der Cloud deiner Wahl — <strong>ohne Laufwerk zu mounten</strong>. Spiegel-Sync oder sicheres Kopieren, Profil anlegen, beim Anmelden leise laufen lassen.',
+      'Synchronisiere jeden lokalen Ordner mit der Cloud deiner Wahl, <strong>ohne Laufwerk zu mounten</strong>. Spiegel-Sync oder sicheres Kopieren, Profil anlegen, beim Anmelden leise laufen lassen.',
     heroCtaMac: 'Für macOS laden',
     heroCtaSource: 'Quellcode ansehen',
     heroNote: 'Apple Silicon · Version {version} · Windows &amp; Linux ebenfalls verfügbar',
@@ -274,12 +274,12 @@ export const LOCALES = {
     f2Title: 'Spiegel-Sync &amp; Kopie',
     f2Kicker: 'Volle Kontrolle',
     f2Body:
-      'Das Ziel exakt spiegeln oder nur Dateien hinzufügen. Nichts wird unerwartet gelöscht — du behältst die Kontrolle.',
+      'Das Ziel exakt spiegeln oder nur Dateien hinzufügen. Nichts wird unerwartet gelöscht, du behältst die Kontrolle.',
     f2Tag: 'Modus',
     f3Title: 'Automatisch beim Start',
     f3Kicker: 'Einrichten und vergessen',
     f3Body:
-      'Aktive Profile laufen bei jeder Anmeldung leise — über einen LaunchAgent oder ein Login-Item ins System integriert.',
+      'Aktive Profile laufen bei jeder Anmeldung leise, über einen LaunchAgent oder ein Login-Item ins System integriert.',
     f3Tag: 'Automatisierung',
     f4Title: 'Kein Mounten nötig',
     f4Kicker: 'Schnell &amp; sauber',
@@ -297,18 +297,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'Zwei Modi',
-    modesH2: 'Spiegeln oder bewahren — du entscheidest.',
+    modesH2: 'Spiegeln oder bewahren, du entscheidest.',
     mode1Title: 'Spiegel-Sync',
     mode1Body:
-      'Macht das Ziel mit der Quelle identisch. Dateien, die in der Quelle fehlen, werden auch im Ziel gelöscht — für eine exakte Abbildung.',
+      'Macht das Ziel mit der Quelle identisch. Dateien, die in der Quelle fehlen, werden auch im Ziel gelöscht, für eine exakte Abbildung.',
     mode2Title: 'Nur kopieren',
     mode2Body:
-      'Fügt Dateien im Ziel hinzu und löscht nichts. Die sichere Wahl für vorsichtigeren Einsatz — kein Risiko unwiederbringlichen Datenverlusts.',
+      'Fügt Dateien im Ziel hinzu und löscht nichts. Die sichere Wahl für vorsichtigeren Einsatz, kein Risiko unwiederbringlichen Datenverlusts.',
 
     dlKicker: 'Download',
     dlH2: 'Läuft auf jedem Desktop.',
     dlLede:
-      'Version {version} · eigenständige Builds. <span class="ac">Die Engine ist enthalten — keine separate Installation nötig.</span>',
+      'Version {version} · eigenständige Builds. <span class="ac">Die Engine ist enthalten, keine separate Installation nötig.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -436,10 +436,10 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · Synchroniseer je mappen stilletjes',
     description:
-      'SyncDeck · een rustige desktopinterface voor rclone. Synchroniseer elke lokale map met elke cloud zonder te mounten — mirror-sync of veilig kopiëren. macOS, Windows en Linux.',
+      'SyncDeck · een rustige desktopinterface voor rclone. Synchroniseer elke lokale map met elke cloud zonder te mounten, mirror-sync of veilig kopiëren. macOS, Windows en Linux.',
     ogTitle: 'SyncDeck · Synchroniseer je mappen stilletjes',
     ogDescription:
-      'Een rustige desktopinterface voor rclone. Synchroniseren zonder mounten — mirror-sync of veilig kopiëren.',
+      'Een rustige desktopinterface voor rclone. Synchroniseren zonder mounten, mirror-sync of veilig kopiëren.',
 
     navFeatures: 'Functies',
     navModes: 'Modi',
@@ -485,7 +485,7 @@ export const LOCALES = {
     f2Title: 'Mirror-sync &amp; kopiëren',
     f2Kicker: 'Volledige controle',
     f2Body:
-      'Spiegel het doel exact of voeg alleen bestanden toe. Er wordt niets onverwacht verwijderd — jij houdt de controle.',
+      'Spiegel het doel exact of voeg alleen bestanden toe. Er wordt niets onverwacht verwijderd, jij houdt de controle.',
     f2Tag: 'Modus',
     f3Title: 'Automatisch bij het inloggen',
     f3Kicker: 'Instellen en vergeten',
@@ -507,18 +507,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'Twee modi',
-    modesH2: 'Spiegelen of behouden — jij beslist.',
+    modesH2: 'Spiegelen of behouden, jij beslist.',
     mode1Title: 'Mirror-sync',
     mode1Body:
-      'Maakt het doel identiek aan de bron. Bestanden die in de bron ontbreken, worden ook op het doel verwijderd — voor een exacte weerspiegeling.',
+      'Maakt het doel identiek aan de bron. Bestanden die in de bron ontbreken, worden ook op het doel verwijderd, voor een exacte weerspiegeling.',
     mode2Title: 'Alleen kopiëren',
     mode2Body:
-      'Voegt bestanden toe aan het doel en verwijdert niets. De veilige keuze voor voorzichtiger gebruik — geen risico op onomkeerbaar gegevensverlies.',
+      'Voegt bestanden toe aan het doel en verwijdert niets. De veilige keuze voor voorzichtiger gebruik, geen risico op onomkeerbaar gegevensverlies.',
 
     dlKicker: 'Downloaden',
     dlH2: 'Draait op elke desktop.',
     dlLede:
-      'Versie {version} · zelfstandige builds. <span class="ac">De engine zit erbij — geen aparte installatie nodig.</span>',
+      'Versie {version} · zelfstandige builds. <span class="ac">De engine zit erbij, geen aparte installatie nodig.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -541,10 +541,10 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · Синхронизируй папки тихо',
     description:
-      'SyncDeck · спокойный десктопный интерфейс для rclone. Синхронизируй любую локальную папку с любым облаком без монтирования — зеркальная синхронизация или безопасное копирование. macOS, Windows и Linux.',
+      'SyncDeck · спокойный десктопный интерфейс для rclone. Синхронизируй любую локальную папку с любым облаком без монтирования, зеркальная синхронизация или безопасное копирование. macOS, Windows и Linux.',
     ogTitle: 'SyncDeck · Синхронизируй папки тихо',
     ogDescription:
-      'Спокойный десктопный интерфейс для rclone. Синхронизация без монтирования — зеркало или безопасное копирование.',
+      'Спокойный десктопный интерфейс для rclone. Синхронизация без монтирования, зеркало или безопасное копирование.',
 
     navFeatures: 'Возможности',
     navModes: 'Режимы',
@@ -590,12 +590,12 @@ export const LOCALES = {
     f2Title: 'Зеркало и копирование',
     f2Kicker: 'Полный контроль',
     f2Body:
-      'Зеркаль назначение точь-в-точь или только добавляй файлы. Ничего не удаляется неожиданно — контроль за тобой.',
+      'Зеркаль назначение точь-в-точь или только добавляй файлы. Ничего не удаляется неожиданно, контроль за тобой.',
     f2Tag: 'Режим',
     f3Title: 'Автоматически при входе',
     f3Kicker: 'Настроил и забыл',
     f3Body:
-      'Включённые профили тихо запускаются при каждом входе — через LaunchAgent или элемент автозагрузки.',
+      'Включённые профили тихо запускаются при каждом входе, через LaunchAgent или элемент автозагрузки.',
     f3Tag: 'Автоматизация',
     f4Title: 'Монтирование не нужно',
     f4Kicker: 'Быстро и чисто',
@@ -612,22 +612,22 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'Два режима',
-    modesH2: 'Отразить или сохранить — решать тебе.',
+    modesH2: 'Отразить или сохранить, решать тебе.',
     mode1Title: 'Зеркальная синхронизация',
     mode1Body:
-      'Делает назначение идентичным источнику. Файлы, отсутствующие в источнике, удаляются и в назначении — когда нужно точное отражение.',
+      'Делает назначение идентичным источнику. Файлы, отсутствующие в источнике, удаляются и в назначении, когда нужно точное отражение.',
     mode2Title: 'Только копирование',
     mode2Body:
-      'Добавляет файлы в назначение и ничего не удаляет. Безопасный выбор для осторожного использования — без риска необратимой потери данных.',
+      'Добавляет файлы в назначение и ничего не удаляет. Безопасный выбор для осторожного использования, без риска необратимой потери данных.',
 
     dlKicker: 'Скачать',
     dlH2: 'Работает на любом десктопе.',
     dlLede:
-      'Версия {version} · автономные сборки. <span class="ac">Движок уже внутри — отдельная установка не нужна.</span>',
+      'Версия {version} · автономные сборки. <span class="ac">Движок уже внутри, отдельная установка не нужна.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
-    dlNote: 'Все сборки — на странице <a href="https://github.com/e-onux/syncdeck/releases">GitHub Releases</a>',
+    dlNote: 'Все сборки, на странице <a href="https://github.com/e-onux/syncdeck/releases">GitHub Releases</a>',
 
     footDesc:
       'Спокойная десктопная оболочка для движка rclone с открытым исходным кодом. Разработано <a href="https://sidrelabs.com">Sidre Labs</a>.',
@@ -637,7 +637,7 @@ export const LOCALES = {
     footReleases: 'Релизы',
     footContact: 'Контакты',
     footIssues: 'Сообщить о проблеме',
-    footTrademark: 'rclone — торговая марка независимой команды открытого проекта.',
+    footTrademark: 'rclone, торговая марка независимой команды открытого проекта.',
     footLang: 'Язык',
   },
 
@@ -646,9 +646,9 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · 静静地同步你的文件夹',
     description:
-      'SyncDeck · 为 rclone 打造的沉静桌面界面。无需挂载即可把任意本地文件夹同步到任意云端——镜像同步或安全复制。支持 macOS、Windows 和 Linux。',
+      'SyncDeck · 为 rclone 打造的沉静桌面界面。无需挂载即可把任意本地文件夹同步到任意云端，镜像同步或安全复制。支持 macOS、Windows 和 Linux。',
     ogTitle: 'SyncDeck · 静静地同步你的文件夹',
-    ogDescription: '为 rclone 打造的沉静桌面界面。无需挂载即可同步——镜像同步或安全复制。',
+    ogDescription: '为 rclone 打造的沉静桌面界面。无需挂载即可同步，镜像同步或安全复制。',
 
     navFeatures: '功能',
     navModes: '模式',
@@ -692,7 +692,7 @@ export const LOCALES = {
     f1Tag: '配置',
     f2Title: '镜像同步与复制',
     f2Kicker: '完全掌控',
-    f2Body: '可以让目标与来源完全一致，也可以只新增文件。不会有意外删除——一切由你决定。',
+    f2Body: '可以让目标与来源完全一致，也可以只新增文件。不会有意外删除，一切由你决定。',
     f2Tag: '模式',
     f3Title: '登录时自动运行',
     f3Kicker: '设置后即可忘记',
@@ -712,15 +712,15 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: '两种模式',
-    modesH2: '镜像还是保留——你来决定。',
+    modesH2: '镜像还是保留，你来决定。',
     mode1Title: '镜像同步',
-    mode1Body: '让目标与来源完全一致。来源中已删除的文件在目标中也会删除——适合需要精确映射时。',
+    mode1Body: '让目标与来源完全一致。来源中已删除的文件在目标中也会删除，适合需要精确映射时。',
     mode2Title: '仅复制',
-    mode2Body: '只向目标添加文件，不删除任何内容。更谨慎使用时的安全选择——没有不可逆的数据丢失风险。',
+    mode2Body: '只向目标添加文件，不删除任何内容。更谨慎使用时的安全选择，没有不可逆的数据丢失风险。',
 
     dlKicker: '下载',
     dlH2: '在每台桌面设备上运行。',
-    dlLede: '版本 {version} · 独立构建。<span class="ac">引擎已内置——无需另行安装。</span>',
+    dlLede: '版本 {version} · 独立构建。<span class="ac">引擎已内置，无需另行安装。</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -743,9 +743,9 @@ export const LOCALES = {
     dir: 'ltr',
     title: 'SyncDeck · フォルダを静かに同期',
     description:
-      'SyncDeck · rclone のための静かなデスクトップインターフェース。マウントせずに任意のローカルフォルダを好きなクラウドへ同期 — ミラー同期または安全なコピー。macOS、Windows、Linux 対応。',
+      'SyncDeck · rclone のための静かなデスクトップインターフェース。マウントせずに任意のローカルフォルダを好きなクラウドへ同期、ミラー同期または安全なコピー。macOS、Windows、Linux 対応。',
     ogTitle: 'SyncDeck · フォルダを静かに同期',
-    ogDescription: 'rclone のための静かなデスクトップインターフェース。マウント不要で同期 — ミラー同期または安全なコピー。',
+    ogDescription: 'rclone のための静かなデスクトップインターフェース。マウント不要で同期、ミラー同期または安全なコピー。',
 
     navFeatures: '機能',
     navModes: 'モード',
@@ -812,18 +812,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: '2つのモード',
-    modesH2: 'ミラーするか、保持するか — あなた次第。',
+    modesH2: 'ミラーするか、保持するか、あなた次第。',
     mode1Title: 'ミラー同期',
     mode1Body:
-      '転送先を転送元と同一にします。転送元にないファイルは転送先でも削除されます — 正確な複製が必要なときに。',
+      '転送先を転送元と同一にします。転送元にないファイルは転送先でも削除されます、正確な複製が必要なときに。',
     mode2Title: 'コピーのみ',
     mode2Body:
-      '転送先にファイルを追加し、何も削除しません。慎重に使いたいときの安全な選択 — 取り返しのつかないデータ損失の心配がありません。',
+      '転送先にファイルを追加し、何も削除しません。慎重に使いたいときの安全な選択、取り返しのつかないデータ損失の心配がありません。',
 
     dlKicker: 'ダウンロード',
     dlH2: 'どのデスクトップでも動作します。',
     dlLede:
-      'バージョン {version} · スタンドアロンビルド。<span class="ac">エンジンは同梱済み — 別途インストールは不要です。</span>',
+      'バージョン {version} · スタンドアロンビルド。<span class="ac">エンジンは同梱済み、別途インストールは不要です。</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
@@ -846,9 +846,9 @@ export const LOCALES = {
     dir: 'rtl',
     title: 'SyncDeck · زامن مجلداتك بهدوء',
     description:
-      'SyncDeck · واجهة سطح مكتب هادئة لـ rclone. زامن أي مجلد محلي مع أي سحابة دون الحاجة إلى التركيب — مزامنة مرآة أو نسخ آمن. لنظام macOS وWindows وLinux.',
+      'SyncDeck · واجهة سطح مكتب هادئة لـ rclone. زامن أي مجلد محلي مع أي سحابة دون الحاجة إلى التركيب, مزامنة مرآة أو نسخ آمن. لنظام macOS وWindows وLinux.',
     ogTitle: 'SyncDeck · زامن مجلداتك بهدوء',
-    ogDescription: 'واجهة سطح مكتب هادئة لـ rclone. مزامنة دون تركيب — مزامنة مرآة أو نسخ آمن.',
+    ogDescription: 'واجهة سطح مكتب هادئة لـ rclone. مزامنة دون تركيب, مزامنة مرآة أو نسخ آمن.',
 
     navFeatures: 'المزايا',
     navModes: 'الأوضاع',
@@ -893,7 +893,7 @@ export const LOCALES = {
     f1Tag: 'ملف إعداد',
     f2Title: 'مزامنة مرآة ونسخ',
     f2Kicker: 'تحكم كامل',
-    f2Body: 'اجعل الوجهة مطابقة تمامًا، أو اكتفِ بإضافة الملفات. لا شيء يُحذف بشكل غير متوقع — القرار لك.',
+    f2Body: 'اجعل الوجهة مطابقة تمامًا، أو اكتفِ بإضافة الملفات. لا شيء يُحذف بشكل غير متوقع, القرار لك.',
     f2Tag: 'الوضع',
     f3Title: 'تلقائيًا عند بدء التشغيل',
     f3Kicker: 'اضبطه وانسَه',
@@ -914,18 +914,18 @@ export const LOCALES = {
     f6Tag: 'i18n',
 
     modesKicker: 'وضعان',
-    modesH2: 'انسخ الصورة أو احتفظ بها — القرار لك.',
+    modesH2: 'انسخ الصورة أو احتفظ بها, القرار لك.',
     mode1Title: 'مزامنة مرآة',
     mode1Body:
-      'تجعل الوجهة مطابقة للمصدر تمامًا. الملفات غير الموجودة في المصدر تُحذف من الوجهة أيضًا — عندما تريد نسخة طبق الأصل.',
+      'تجعل الوجهة مطابقة للمصدر تمامًا. الملفات غير الموجودة في المصدر تُحذف من الوجهة أيضًا, عندما تريد نسخة طبق الأصل.',
     mode2Title: 'نسخ فقط',
     mode2Body:
-      'يضيف الملفات إلى الوجهة ولا يحذف شيئًا. الخيار الآمن للاستخدام الحذر — دون خطر فقدان بيانات لا يمكن التراجع عنه.',
+      'يضيف الملفات إلى الوجهة ولا يحذف شيئًا. الخيار الآمن للاستخدام الحذر, دون خطر فقدان بيانات لا يمكن التراجع عنه.',
 
     dlKicker: 'تنزيل',
     dlH2: 'يعمل على كل سطح مكتب.',
     dlLede:
-      'الإصدار {version} · حزم مستقلة. <span class="ac">المحرك مضمّن — لا حاجة إلى تثبيت منفصل.</span>',
+      'الإصدار {version} · حزم مستقلة. <span class="ac">المحرك مضمّن, لا حاجة إلى تثبيت منفصل.</span>',
     dlMacDetail: 'Apple Silicon · 12+',
     dlWinDetail: 'x64 · 10+',
     dlLinuxDetail: 'x64',
