@@ -161,7 +161,7 @@ final class EngineIntegrationTests: XCTestCase {
         let check = profile(.check, to: target, extra: "--exclude *.tmp")
         let checkOK = await runner.run(check)
         XCTAssertTrue(checkOK, store.lastRun(check.id)?.output ?? "")
-        XCTAssertTrue(store.lastRun(check.id)?.output.contains("Identical: 2") ?? false, store.lastRun(check.id)?.output ?? "")
+        XCTAssertTrue(store.lastRun(check.id)?.output.contains(String(localized: "Identical: \(2)")) ?? false, store.lastRun(check.id)?.output ?? "")
 
         // Mirror sync deletes what the source no longer has.
         try FileManager.default.removeItem(at: Paths.appFolder(localRoot).appendingPathComponent("one.txt"))
@@ -175,7 +175,7 @@ final class EngineIntegrationTests: XCTestCase {
         try writeLocal("new.txt", "n")
         let mismatch = await runner.run(check)
         XCTAssertFalse(mismatch)
-        XCTAssertTrue(store.lastRun(check.id)?.output.contains("Only in source: 1") ?? false, store.lastRun(check.id)?.output ?? "")
+        XCTAssertTrue(store.lastRun(check.id)?.output.contains(String(localized: "Only in source: \(1)")) ?? false, store.lastRun(check.id)?.output ?? "")
 
         // Move empties the source of transferred files.
         let move = profile(.move, to: "\(target)-moved")
@@ -241,7 +241,7 @@ final class EngineIntegrationTests: XCTestCase {
         runner.stop(copy.id)
         let ok = await task.value
         XCTAssertFalse(ok)
-        XCTAssertTrue(store.lastRun(copy.id)?.output.contains("Stopped by user.") ?? false, store.lastRun(copy.id)?.output ?? "")
+        XCTAssertTrue(store.lastRun(copy.id)?.output.contains(String(localized: "Stopped by user.")) ?? false, store.lastRun(copy.id)?.output ?? "")
         XCTAssertFalse(runner.isRunning(copy.id))
     }
 
@@ -259,6 +259,54 @@ final class EngineIntegrationTests: XCTestCase {
         let ok = await runner.run(copy)
         XCTAssertTrue(ok, store.lastRun(copy.id)?.output ?? "")
         XCTAssertNil(store.authAlerts[dav])
+    }
+
+    /// The OAuth plumbing without signing in: rclone's local sign-in link is
+    /// captured from the engine log, it redirects to the provider, and
+    /// cancelling unblocks the config call and leaves no half-made client.
+    func testOAuthLinkCaptureAndCancel() async throws {
+        let name = "it-drive"
+        try? await RemoteService.delete(name)
+        let broker = OAuthBroker.shared
+        broker.begin()
+        defer { broker.end() }
+        // rclone 1.75+ first asks whether to keep using its shared Drive
+        // client_id (being retired); the app shows that question, here it is
+        // answered "yes" so the flow moves on to the browser step.
+        let create = Task { () -> RemoteService.ConfigQuestion? in
+            var question = try await RemoteService.create(name: name, type: "drive", parameters: [:])
+            while let current = question, current.option.name == "config_shared_client_id" {
+                question = try await RemoteService.answer(name: name, question: current, result: "true")
+            }
+            return question
+        }
+
+        var waited = 0
+        while broker.authURL == nil && waited < 150 {
+            try await Task.sleep(for: .milliseconds(100))
+            waited += 1
+        }
+        let link = try XCTUnwrap(broker.authURL, "sign-in link was not captured from the engine log")
+        XCTAssertEqual(link.host, "127.0.0.1")
+
+        // The local server must hand the browser on to Google's consent page.
+        final class NoRedirect: NSObject, URLSessionTaskDelegate {
+            func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest) async -> URLRequest? { nil }
+        }
+        let (_, response) = try await URLSession.shared.data(from: link, delegate: NoRedirect())
+        let location = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Location") ?? ""
+        XCTAssertTrue(location.hasPrefix("https://accounts.google.com/"), location)
+
+        broker.cancel()
+        do {
+            _ = try await create.value
+            XCTFail("create should fail once the sign-in is cancelled")
+        } catch {
+            XCTAssertFalse(error.localizedDescription.isEmpty)
+        }
+        try? await RemoteService.delete(name)
+        let clients = try await RemoteService.clients()
+        XCTAssertFalse(clients.contains { $0.name == name })
     }
 
     func testScheduling() async throws {

@@ -39,4 +39,5 @@ xcodebuild test \
   -project SyncDeck.xcodeproj \
   -scheme SyncDeck \
   -destination "$DEST" \
-  -derivedDataPath build/dd
+  -derivedDataPath build/dd \
+  "${@:2}"

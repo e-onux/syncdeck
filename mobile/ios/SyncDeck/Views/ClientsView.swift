@@ -254,6 +254,7 @@ private struct ReconnectView: View {
 
     @State private var phase: Phase = .authorizing
     @State private var question: RemoteService.ConfigQuestion?
+    @State private var answering = false
 
     enum Phase: Equatable { case authorizing, done, failed(String) }
 
@@ -261,7 +262,7 @@ private struct ReconnectView: View {
         NavigationStack {
             VStack(spacing: 16) {
                 if let question {
-                    ConfigQuestionForm(question: question) { answer in
+                    ConfigQuestionForm(question: question, busy: answering) { answer in
                         Task { await respond(answer, to: question) }
                     }
                 } else {
@@ -311,6 +312,12 @@ private struct ReconnectView: View {
     }
 
     private func respond(_ answer: String, to current: RemoteService.ConfigQuestion) async {
+        answering = true
+        OAuthBroker.shared.begin()
+        defer {
+            answering = false
+            OAuthBroker.shared.end()
+        }
         do {
             question = try await RemoteService.answer(name: name, question: current, result: answer)
             if question == nil { finish() }
@@ -335,6 +342,7 @@ private struct ReconnectView: View {
 /// a default) and returns the user's answer.
 struct ConfigQuestionForm: View {
     let question: RemoteService.ConfigQuestion
+    var busy = false
     let onSubmit: (String) -> Void
     @State private var value = ""
 
@@ -374,8 +382,18 @@ struct ConfigQuestionForm: View {
                 }
             }
             Section {
-                Button("Continue") { onSubmit(value) }
-                    .bold()
+                Button {
+                    onSubmit(value)
+                } label: {
+                    HStack {
+                        Text("Continue").bold()
+                        if busy {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(busy)
             }
         }
         .onAppear {

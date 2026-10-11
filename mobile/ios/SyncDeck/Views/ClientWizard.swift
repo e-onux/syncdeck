@@ -148,7 +148,7 @@ private struct ClientForm: View {
     var body: some View {
         Group {
             if let question, let createdName {
-                ConfigQuestionForm(question: question) { answer in
+                ConfigQuestionForm(question: question, busy: phase == .creating) { answer in
                     Task { await respond(answer, to: question, name: createdName) }
                 }
             } else {
@@ -345,7 +345,7 @@ private struct ClientForm: View {
         do {
             createdName = target
             question = try await RemoteService.create(name: target, type: type.id, parameters: parameters)
-            if question == nil { await finish() }
+            if question == nil { await finish() } else { phase = .editing }
         } catch {
             // A half-created OAuth remote has no token; don't leave it behind.
             try? await RemoteService.delete(target)
@@ -355,11 +355,12 @@ private struct ClientForm: View {
     }
 
     private func respond(_ answer: String, to current: RemoteService.ConfigQuestion, name: String) async {
+        phase = .creating
         if oauth { OAuthBroker.shared.begin() }
         defer { if oauth { OAuthBroker.shared.end() } }
         do {
             question = try await RemoteService.answer(name: name, question: current, result: answer)
-            if question == nil { await finish() }
+            if question == nil { await finish() } else { phase = .editing }
         } catch {
             question = nil
             phase = .failed(RcloneArgs.firstMeaningfulLine(error.localizedDescription))

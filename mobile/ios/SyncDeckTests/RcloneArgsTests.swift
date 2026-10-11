@@ -107,7 +107,7 @@ final class ServiceParsingTests: XCTestCase {
 
     func testCheckSummary() {
         let lines = SyncRunner.checkSummary(["combined": ["= a", "* b", "+ c", "- d", "= e"]])
-        XCTAssertTrue(lines.contains("Identical: 2"))
+        XCTAssertTrue(lines.contains(String(localized: "Identical: \(2)")), lines.joined(separator: "\n"))
         XCTAssertTrue(lines.contains("* b"))
         XCTAssertFalse(lines.contains("= a"))
     }
