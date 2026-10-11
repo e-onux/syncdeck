@@ -1,0 +1,61 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "CFBundleDisplayName": {
+      "shouldTranslate": false
+    },
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck, bir istemci yerel ağındaki bir sunucuyu gösterdiğinde (SFTP, SMB, WebDAV, FTP) o sunucuya bağlanır."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck verbindet sich mit Servern in deinem lokalen Netzwerk (SFTP, SMB, WebDAV, FTP), wenn ein Client darauf zeigt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck se conecta a servidores de tu red local (SFTP, SMB, WebDAV, FTP) cuando un cliente apunta a uno."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck maakt verbinding met servers in je lokale netwerk (SFTP, SMB, WebDAV, FTP) als een client daarnaar verwijst."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当客户端指向本地网络中的服务器（SFTP、SMB、WebDAV、FTP）时，SyncDeck 会连接到该服务器。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クライアントがローカルネットワーク上のサーバ (SFTP, SMB, WebDAV, FTP) を指している場合、SyncDeck はそのサーバに接続します。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck подключается к серверам в вашей локальной сети (SFTP, SMB, WebDAV, FTP), если клиент указывает на них."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتصل SyncDeck بالخوادم في شبكتك المحلية (SFTP وSMB وWebDAV وFTP) عندما يشير عميل إلى أحدها."
+          }
+        }
+      }
+    }
+  }
+}

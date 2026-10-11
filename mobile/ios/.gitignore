@@ -1,0 +1,7 @@
+# Engine binary: fetched by scripts/fetch-engine.sh, never committed.
+Frameworks/Rclone.xcframework
+Frameworks/Rclone.version
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/

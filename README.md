@@ -1,6 +1,6 @@
 # SyncDeck
 
-SyncDeck is a cross-platform desktop app that puts a calm graphical interface on
+SyncDeck is a cross-platform desktop and iPhone app that puts a calm graphical interface on
 top of `rclone`. It syncs any local folder to any cloud without mounting a drive
 (mirror sync or safe copy). A **Sidre Labs** product.
 
@@ -14,6 +14,8 @@ This is a monorepo holding the product and everything around it:
 |---|---|---|
 | [`app/`](app/) | The desktop app | Ionic + React + Electron, electron-builder |
 | [`website/`](website/) | Product site (`sidrelabs.com/syncdeck`) | Static, speed-first build, nginx on K3s |
+| [`mobile/ios/`](mobile/ios/) | The iPhone and iPad app | SwiftUI, rclone linked in-process via gomobile |
+| [`mobile/engine/`](mobile/engine/) | rclone built as a mobile library for the phone apps | Go, gomobile |
 | [`packages/mcp-server/`](packages/mcp-server/) | MCP server exposing the engine to LLM agents | Node, `@modelcontextprotocol/sdk` |
 | [`docs/`](docs/) | Architecture notes (advisories, engine updates, MCP) | Markdown |
 
@@ -30,6 +32,17 @@ npm run bundle:mac     # standalone .dmg/.zip (bundle:win / bundle:linux for the
 
 Details: [`app/README.md`](app/README.md). Releases are built by GitHub Actions
 when a `v*` tag is pushed (see `.github/workflows/release.yml`).
+
+## mobile/ios/, the iPhone app
+
+```bash
+cd mobile/ios
+scripts/fetch-engine.sh                      # rclone engine as Rclone.xcframework
+open SyncDeck.xcodeproj
+scripts/integration-test.sh "iPhone 16 Pro"  # unit + engine integration tests
+```
+
+Details: [`mobile/ios/README.md`](mobile/ios/README.md).
 
 ## website/, the product site
 
