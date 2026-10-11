@@ -71,7 +71,14 @@ final class SyncRunner {
         do {
             record = try await execute(profile, resync: false)
         } catch {
-            if profile.mode == .bisync, RcloneArgs.needsBisyncResync(error.localizedDescription), !stopRequested.contains(profile.id) {
+            // A bisync pair with no prior listings needs a --resync baseline.
+            // rclone says so in its log; a pair that never completed a run is
+            // treated the same way, since resync copies both ways and never
+            // deletes anything.
+            let neverSynced = !store.history(profile.id).contains { $0.ok }
+            if profile.mode == .bisync,
+               RcloneArgs.needsBisyncResync(error.localizedDescription) || neverSynced,
+               !stopRequested.contains(profile.id) {
                 append(profile.id, String(localized: "First bisync run: establishing a baseline (resync)…"))
                 do {
                     record = try await execute(profile, resync: true)
@@ -226,8 +233,10 @@ final class SyncRunner {
         let progress = running[profile.id]
         lines.append(Self.summaryLine(progress))
         if !success {
-            // Log lines may still be hopping to the main actor; take them from
-            // the buffer so the error always carries rclone's reason.
+            // rclone logs the reason just before the job ends; give the pipe
+            // reader a moment, then take the lines from the buffer (they may
+            // still be hopping to the main actor) so the error carries it.
+            try? await Task.sleep(for: .milliseconds(300))
             let missing = engineLines.all.filter { !lines.contains($0) }
             throw EngineError(method: method, status: 500, message: (lines + missing + [error]).joined(separator: "\n"))
         }

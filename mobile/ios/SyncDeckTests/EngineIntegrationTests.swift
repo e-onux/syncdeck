@@ -246,7 +246,7 @@ final class EngineIntegrationTests: XCTestCase {
     }
 
     func testAuthFailureRaisesAlertAndSuccessClearsIt() async throws {
-        try await RemoteService.create(name: dav, type: "webdav", parameters: [
+        _ = try await RemoteService.create(name: dav, type: "webdav", parameters: [
             "url": webdavURL, "vendor": "other", "user": user, "pass": "wrong-password",
         ])
         try writeLocal("a.txt", "a")
