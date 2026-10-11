@@ -120,6 +120,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # The default also asks for the legacy "tools" package, which current
+          # cmdline-tools no longer ship, and sdkmanager then fails the job.
+          packages: 'platform-tools'
       - name: Install NDK
         run: sdkmanager --install "ndk;27.2.12479018"
 
