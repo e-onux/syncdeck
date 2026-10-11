@@ -1261,6 +1261,110 @@
         }
       }
     },
+    "Add a folder from Files…": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar'dan klasör ekle…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner aus „Dateien“ hinzufügen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir una carpeta de Archivos…"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map uit Bestanden toevoegen…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从“文件”添加文件夹…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ファイル」からフォルダを追加…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить папку из «Файлов»…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة مجلد من الملفات…"
+          }
+        }
+      }
+    },
+    "Add any folder the Files app can reach (On My iPhone, iCloud Drive, a USB drive, other apps); you can then browse inside it and pick any subfolder. The SyncDeck folder itself appears in Files under On My iPhone.": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dosyalar uygulamasının erişebildiği herhangi bir klasörü ekle (iPhone'umda, iCloud Drive, USB sürücü, diğer uygulamalar); sonra içinde gezinip istediğin alt klasörü seçebilirsin. SyncDeck klasörünün kendisi Dosyalar'da iPhone'umda altında görünür."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge einen beliebigen Ordner hinzu, den die App „Dateien“ erreicht (Auf meinem iPhone, iCloud Drive, ein USB-Laufwerk, andere Apps); danach kannst du darin navigieren und jeden Unterordner wählen. Der SyncDeck-Ordner selbst erscheint in „Dateien“ unter „Auf meinem iPhone“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade cualquier carpeta a la que llegue la app Archivos (En mi iPhone, iCloud Drive, una unidad USB, otras apps); después puedes navegar dentro y elegir cualquier subcarpeta. La propia carpeta SyncDeck aparece en Archivos en En mi iPhone."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voeg elke map toe die de app Bestanden kan bereiken (Op mijn iPhone, iCloud Drive, een USB-schijf, andere apps); daarna kun je erin bladeren en elke submap kiezen. De SyncDeck-map zelf staat in Bestanden onder Op mijn iPhone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加“文件”App 可访问的任意文件夹（我的 iPhone、iCloud 云盘、USB 驱动器、其他 App），之后可在其中浏览并选择任意子文件夹。SyncDeck 文件夹本身位于“文件”的“我的 iPhone”中。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ファイル」アプリからアクセスできる任意のフォルダ（このiPhone内、iCloud Drive、USB ドライブ、他のアプリ）を追加できます。追加後はその中を移動して任意のサブフォルダを選べます。SyncDeck フォルダ自体は「ファイル」の「このiPhone内」にあります。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте любую папку, доступную в «Файлах» (На iPhone, iCloud Drive, USB-накопитель, другие приложения); затем можно заходить внутрь и выбирать любую вложенную папку. Сама папка SyncDeck находится в «Файлах» в разделе «На iPhone»."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أضف أي مجلد يصل إليه تطبيق الملفات (على الـ iPhone، iCloud Drive، محرك USB، تطبيقات أخرى)؛ ثم يمكنك التصفح داخله واختيار أي مجلد فرعي. يظهر مجلد SyncDeck نفسه في الملفات ضمن \"على الـ iPhone\"."
+          }
+        }
+      }
+    },
     "Address (URL)": {
       "localizations": {
         "tr": {
@@ -2037,58 +2141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "اختر مجلدًا سحابيًا كوجهة لصورك."
-          }
-        }
-      }
-    },
-    "Choose a folder in Files…": {
-      "localizations": {
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dosyalar'da bir klasör seç…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ordner in „Dateien“ wählen…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elegir una carpeta en Archivos…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kies een map in Bestanden…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在“文件”中选择文件夹…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「ファイル」でフォルダを選択…"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выбрать папку в «Файлах»…"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "اختر مجلدًا في الملفات…"
           }
         }
       }
@@ -8021,6 +8073,58 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaldır"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwijderen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убрать"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إزالة"
+          }
+        }
+      }
+    },
     "Remove %lld backed-up items from iPhone": {
       "localizations": {
         "tr": {
@@ -10773,58 +10877,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "اختبار الاتصال"
-          }
-        }
-      }
-    },
-    "The SyncDeck folder appears in the Files app under On My iPhone. Folders from Files, iCloud Drive or a USB drive are remembered with permission.": {
-      "localizations": {
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SyncDeck klasörü Dosyalar uygulamasında iPhone'umda altında görünür. Dosyalar, iCloud Drive veya USB sürücüden seçilen klasörler izinle hatırlanır."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der SyncDeck-Ordner erscheint in der App „Dateien“ unter „Auf meinem iPhone“. Ordner aus „Dateien“, iCloud Drive oder von einem USB-Laufwerk werden mit Berechtigung gemerkt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La carpeta SyncDeck aparece en la app Archivos en En mi iPhone. Las carpetas de Archivos, iCloud Drive o una unidad USB se recuerdan con permiso."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De SyncDeck-map staat in de app Bestanden onder Op mijn iPhone. Mappen uit Bestanden, iCloud Drive of een USB-schijf worden met toestemming onthouden."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SyncDeck 文件夹会出现在“文件”App 的“我的 iPhone”中。来自“文件”、iCloud 云盘或 USB 驱动器的文件夹会在授权后被记住。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SyncDeck フォルダは「ファイル」アプリの「このiPhone内」に表示されます。「ファイル」、iCloud Drive、USB ドライブのフォルダは許可を得て記憶されます。"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Папка SyncDeck отображается в приложении «Файлы» в разделе «На iPhone». Папки из «Файлов», iCloud Drive или USB-накопителя запоминаются с разрешением."
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يظهر مجلد SyncDeck في تطبيق الملفات ضمن \"على الـ iPhone\". تُحفظ المجلدات من الملفات أو iCloud Drive أو محرك USB بإذنك."
           }
         }
       }

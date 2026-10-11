@@ -430,7 +430,7 @@ struct RunRecordRow: View {
             if s.bytesFreed > 0 { parts.append(String(localized: "\(RcloneArgs.humanBytes(s.bytesFreed)) freed")) }
             return parts.joined(separator: " · ")
         }
-        return "\(s.files) · \(RcloneArgs.humanBytes(s.bytes)) · \(RcloneArgs.humanDuration(s.elapsed))"
+        return [String(localized: "\(s.files) files"), RcloneArgs.humanBytes(s.bytes), RcloneArgs.humanDuration(s.elapsed)].joined(separator: " · ")
     }
 }
 

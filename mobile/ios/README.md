@@ -73,7 +73,7 @@ integration suite. CI runs the same script (`.github/workflows/ios.yml`).
 
 | Desktop | iPhone |
 |---|---|
-| Profiles: source, destination, mode, extra args, schedule | Same. Local paths are a folder inside the app (shown in Files under On My iPhone > SyncDeck) or any folder picked in Files, kept as a security-scoped bookmark |
+| Profiles: source, destination, mode, extra args, schedule | Same. Local paths are the app's own folder (Files > On My iPhone > SyncDeck) or any folder linked once from the Files picker (On My iPhone, iCloud Drive, USB drives, other apps). Linked folders are kept as security-scoped bookmarks and can be browsed into, so any subfolder can be synced, and new folders created |
 | sync, copy, move, bisync (automatic first-run resync), check | Same |
 | Live progress, per-file log, Stop | Same, polled from `core/stats` and `core/transferred` |
 | Dry run, checksum, bandwidth toggles | Same. Other extra arguments are mapped to rc options: filters, `--transfers`, `--checkers`, `--ignore-existing`, `--update`, `--size-only`, `--max-delete`, `--backup-dir` and more. Anything else is listed as ignored in the run log |

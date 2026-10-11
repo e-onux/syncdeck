@@ -16,6 +16,8 @@ struct PersistedState: Codable {
     /// Verified items whose removal from the device is still waiting for the
     /// user's confirmation (iOS asks; it cannot be done in the background).
     var pendingPhotoDeletion: [String: [String]] = [:]
+    /// Folders outside the app the person linked from the Files picker.
+    var linkedFolders: [LinkedFolder] = []
 
     init() {}
 
@@ -32,6 +34,7 @@ struct PersistedState: Codable {
         accent = try c.decodeIfPresent(AccentName.self, forKey: .accent) ?? .mint
         uploadedPhotos = try c.decodeIfPresent([String: [String]].self, forKey: .uploadedPhotos) ?? [:]
         pendingPhotoDeletion = try c.decodeIfPresent([String: [String]].self, forKey: .pendingPhotoDeletion) ?? [:]
+        linkedFolders = try c.decodeIfPresent([LinkedFolder].self, forKey: .linkedFolders) ?? []
     }
 }
 
@@ -193,6 +196,28 @@ final class AppStore {
 
     func setPendingDeletion(_ ids: [String], profile: String) {
         state.pendingPhotoDeletion[profile] = ids.isEmpty ? nil : ids
+        save()
+    }
+
+    // MARK: - Linked folders
+
+    var linkedFolders: [LinkedFolder] { state.linkedFolders }
+
+    /// Adds a folder, or refreshes the bookmark of one with the same name.
+    @discardableResult
+    func link(_ folder: LinkedFolder) -> LinkedFolder {
+        if let index = state.linkedFolders.firstIndex(where: { $0.name == folder.name }) {
+            state.linkedFolders[index].bookmark = folder.bookmark
+            save()
+            return state.linkedFolders[index]
+        }
+        state.linkedFolders.append(folder)
+        save()
+        return folder
+    }
+
+    func unlink(_ id: String) {
+        state.linkedFolders.removeAll { $0.id == id }
         save()
     }
 

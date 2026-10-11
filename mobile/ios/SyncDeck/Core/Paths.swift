@@ -75,17 +75,36 @@ enum EndpointResolver {
             throw Failure.empty
         case .external:
             guard let data = endpoint.bookmark else { throw Failure.staleBookmark(endpoint.path) }
-            var stale = false
-            let url = try URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
-            guard url.startAccessingSecurityScopedResource() else { throw Failure.noAccess(endpoint.path) }
-            return ResolvedEndpoint(fsPath: url.path, scopedURL: url)
+            let root = try openBookmark(data, name: endpoint.path)
+            var url = root
+            if let sub = endpoint.subpath, !sub.isEmpty {
+                url = root.appendingPathComponent(sub, isDirectory: true)
+                try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            }
+            return ResolvedEndpoint(fsPath: url.path, scopedURL: root)
         }
     }
 
-    static func bookmark(for url: URL) throws -> Endpoint {
+    /// Resolves a linked folder's bookmark and opens its security scope; the
+    /// caller must call `stopAccessingSecurityScopedResource()` when done.
+    static func openBookmark(_ data: Data, name: String) throws -> URL {
+        var stale = false
+        let url: URL
+        do {
+            url = try URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
+        } catch {
+            throw Failure.staleBookmark(name)
+        }
+        guard url.startAccessingSecurityScopedResource() else { throw Failure.noAccess(name) }
+        return url
+    }
+
+    /// Bookmarks a folder picked in the Files picker so it can be opened again
+    /// after the app restarts.
+    static func link(_ url: URL) throws -> LinkedFolder {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let data = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
-        return Endpoint(kind: .external, path: url.lastPathComponent, bookmark: data)
+        return LinkedFolder(name: url.lastPathComponent, bookmark: data)
     }
 }

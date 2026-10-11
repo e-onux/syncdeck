@@ -22,10 +22,13 @@ struct Endpoint: Codable, Hashable, Sendable {
     }
 
     var kind: Kind
-    /// appFolder: path relative to Documents. external: display name.
-    /// remote: the rclone path, e.g. "gdrive:Backups".
+    /// appFolder: path relative to Documents. external: the linked folder's
+    /// name. remote: the rclone path, e.g. "gdrive:Backups".
     var path: String
+    /// external: security-scoped bookmark of the linked folder.
     var bookmark: Data?
+    /// external: a subfolder inside the linked folder, e.g. "Work/2026".
+    var subpath: String?
 
     static let empty = Endpoint(kind: .remote, path: "")
 
@@ -46,7 +49,8 @@ struct Endpoint: Codable, Hashable, Sendable {
     var displayPath: String {
         switch kind {
         case .appFolder: path.isEmpty ? "SyncDeck" : "SyncDeck/\(path)"
-        case .external: path
+        case .external:
+            ([path] + (subpath ?? "").split(separator: "/").map(String.init)).joined(separator: " › ")
         case .photos: String(localized: "Photos")
         case .remote:
             // "onedrive:Backups/2026" reads as "onedrive › Backups › 2026".
@@ -54,6 +58,15 @@ struct Endpoint: Codable, Hashable, Sendable {
                 .replacingOccurrences(of: "/", with: " › ")
         }
     }
+}
+
+/// A folder outside the app (iCloud Drive, On My iPhone, a USB drive, another
+/// app's folder) that the person picked once in the Files picker. Keeping the
+/// bookmark lets the app browse inside it and sync any subfolder later.
+struct LinkedFolder: Codable, Identifiable, Hashable, Sendable {
+    var id: String = UUID().uuidString
+    var name: String
+    var bookmark: Data
 }
 
 struct SyncProfile: Codable, Identifiable, Hashable, Sendable {

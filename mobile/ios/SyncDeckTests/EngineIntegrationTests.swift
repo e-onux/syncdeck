@@ -309,6 +309,48 @@ final class EngineIntegrationTests: XCTestCase {
         XCTAssertFalse(clients.contains { $0.name == name })
     }
 
+    /// A folder outside the app, linked through a bookmark, synced from one of
+    /// its subfolders (the Files picker case), both directions.
+    func testLinkedFolderSubfolderSync() async throws {
+        try await makeWebdav()
+        let outside = FileManager.default.temporaryDirectory.appendingPathComponent("linked-\(run)", isDirectory: true)
+        let sub = outside.appendingPathComponent("Work/2026", isDirectory: true)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try Data("report".utf8).write(to: sub.appendingPathComponent("report.txt"))
+        try Data("ignore".utf8).write(to: outside.appendingPathComponent("top.txt"))
+        defer { try? FileManager.default.removeItem(at: outside) }
+
+        let folder = try EndpointResolver.link(outside)
+        XCTAssertEqual(folder.name, outside.lastPathComponent)
+        store.link(folder)
+        XCTAssertEqual(store.linkedFolders.count, 1)
+
+        var p = SyncProfile(name: "linked")
+        p.source = Endpoint(kind: .external, path: folder.name, bookmark: folder.bookmark, subpath: "Work/2026")
+        p.destination = .remote("\(dav):it-\(run)-linked")
+        p.mode = .sync
+        XCTAssertEqual(p.source.displayPath, "\(folder.name) › Work › 2026")
+        store.upsert(p)
+
+        let up = await runner.run(p)
+        XCTAssertTrue(up, store.lastRun(p.id)?.output ?? "")
+        let uploaded = try await remoteNames("\(dav):it-\(run)-linked")
+        XCTAssertEqual(uploaded, ["report.txt"], "only the chosen subfolder is synced")
+
+        // And back down into a new subfolder of the linked folder.
+        var down = SyncProfile(name: "linked-down")
+        down.source = .remote("\(dav):it-\(run)-linked")
+        down.destination = Endpoint(kind: .external, path: folder.name, bookmark: folder.bookmark, subpath: "Restored")
+        down.mode = .copy
+        store.upsert(down)
+        let ok = await runner.run(down)
+        XCTAssertTrue(ok, store.lastRun(down.id)?.output ?? "")
+        let restored = try FileManager.default.contentsOfDirectory(atPath: outside.appendingPathComponent("Restored").path)
+        XCTAssertEqual(restored, ["report.txt"])
+        store.unlink(folder.id)
+        XCTAssertTrue(store.linkedFolders.isEmpty)
+    }
+
     func testScheduling() async throws {
         var p = profile(.copy, to: "\(dav):x")
         XCTAssertTrue(store.dueProfiles().isEmpty, "manual profiles are never due")
