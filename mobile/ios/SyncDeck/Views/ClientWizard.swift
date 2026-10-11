@@ -59,7 +59,7 @@ private struct ProviderList: View {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return store.backendTypes }
         return store.backendTypes.filter {
-            $0.description.lowercased().contains(q) || $0.name.lowercased().contains(q)
+            Friendly.providerName($0.id, fallback: $0.description).lowercased().contains(q) || $0.name.lowercased().contains(q)
         }
     }
 
@@ -80,7 +80,7 @@ private struct ProviderList: View {
                 Section("Popular") { ForEach(featured) { row($0) } }
             }
             if !others.isEmpty {
-                Section("All providers") { ForEach(others) { row($0) } }
+                Section("More services") { ForEach(others) { row($0) } }
             }
         }
         .searchable(text: $query, prompt: Text("Search clients"))
@@ -92,10 +92,9 @@ private struct ProviderList: View {
         } label: {
             HStack(spacing: 12) {
                 ProviderIcon(type: type.id)
-                VStack(alignment: .leading) {
-                    Text(type.description).foregroundStyle(.primary)
-                    Text(type.name).font(.caption).foregroundStyle(.secondary)
-                }
+                Text(Friendly.providerName(type.id, fallback: type.description))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
             }
@@ -116,7 +115,7 @@ private struct ClientForm: View {
     @State private var question: RemoteService.ConfigQuestion?
     @State private var createdName: String?
 
-    enum Phase: Equatable { case editing, testing, creating, done, failed(String) }
+    enum Phase: Equatable { case editing, testing, creating, done, failed(String), invalid(String) }
     enum TestResult: Equatable { case ok, failed(String) }
 
     private var oauth: Bool { ClientWizard.isOAuth(type) }
@@ -125,10 +124,9 @@ private struct ClientForm: View {
         if let curated = ClientWizard.curatedFields[type.id] {
             return curated.compactMap { key in type.options.first { $0.name == key } }
         }
-        if oauth {
-            return ["client_id", "client_secret"].compactMap { key in type.options.first { $0.name == key } }
-        }
-        return type.options.filter { !$0.advanced && !Self.hidden.contains($0.name) }
+        // OAuth providers only need the sign-in; their app id/secret are advanced.
+        if oauth { return [] }
+        return type.options.filter { $0.required && !Self.hidden.contains($0.name) }
     }
 
     private var advancedOptions: [BackendOption] {
@@ -155,13 +153,15 @@ private struct ClientForm: View {
                 form
             }
         }
-        .navigationTitle(type.description)
+        .navigationTitle(Friendly.providerName(type.id, fallback: type.description))
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(phase == .creating)
         .onAppear {
             if name.isEmpty { name = suggestedName() }
         }
     }
+
+    private var providerName: String { Friendly.providerName(type.id, fallback: type.description) }
 
     private var form: some View {
         Form {
@@ -170,7 +170,7 @@ private struct ClientForm: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             } header: {
-                Text("Client name")
+                Text("Name")
             } footer: {
                 if !cleanName.isEmpty && cleanName != name {
                     Text("Saved as \(cleanName)")
@@ -180,12 +180,57 @@ private struct ClientForm: View {
             if !mainOptions.isEmpty {
                 Section {
                     ForEach(mainOptions) { option in field(option) }
-                } header: {
-                    Text(oauth ? "OAuth (optional)" : "Credentials")
                 } footer: {
-                    Text(oauth
-                         ? "Leave empty to use rclone's own client. Authorize in the browser; SyncDeck keeps the access token in its local engine config."
-                         : "Credentials are stored only in the local engine config on this iPhone and are never sent anywhere else.")
+                    Text("Credentials are stored only in the local engine config on this iPhone and are never sent anywhere else.")
+                }
+            }
+
+            Section {
+                if oauth {
+                    Button {
+                        Task { await create() }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if phase == .creating { ProgressView().padding(.trailing, 6) }
+                            Text(phase == .creating ? String(localized: "Waiting for sign-in…") : String(localized: "Sign in with \(providerName)"))
+                                .bold()
+                            Spacer()
+                        }
+                    }
+                    .disabled(phase == .creating || cleanName.isEmpty)
+                    if phase == .creating {
+                        Button("Cancel", role: .cancel) { OAuthBroker.shared.cancel() }
+                    }
+                } else {
+                    Button {
+                        Task { await create() }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if phase == .creating || phase == .testing { ProgressView().padding(.trailing, 6) }
+                            Text(phase == .creating || phase == .testing ? String(localized: "Connecting…") : String(localized: "Connect"))
+                                .bold()
+                            Spacer()
+                        }
+                    }
+                    .disabled(phase == .creating || phase == .testing || cleanName.isEmpty || missingRequired)
+                }
+                if case .failed(let message) = phase {
+                    ErrorDetail(raw: message)
+                }
+                if case .invalid(let message) = phase {
+                    Text(message).font(.footnote).foregroundStyle(.red)
+                }
+                if case .failed(let message) = testResult {
+                    ErrorDetail(raw: message)
+                }
+                if phase == .done {
+                    Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                }
+            } footer: {
+                if oauth {
+                    Text("You sign in on \(providerName)'s own page. SyncDeck never sees your password; it keeps only an access key on this iPhone.")
                 }
             }
 
@@ -194,49 +239,6 @@ private struct ClientForm: View {
                     DisclosureGroup("Advanced options", isExpanded: $showAdvanced) {
                         ForEach(advancedOptions) { option in field(option) }
                     }
-                }
-            }
-
-            Section {
-                if !oauth {
-                    Button {
-                        Task { await test() }
-                    } label: {
-                        HStack {
-                            Text(phase == .testing ? "Testing…" : "Test connection")
-                            Spacer()
-                            switch testResult {
-                            case .ok: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                            case .failed: Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
-                            case nil: EmptyView()
-                            }
-                        }
-                    }
-                    .disabled(phase != .editing || missingRequired)
-                    if case .failed(let message) = testResult {
-                        Text(message).font(.footnote).foregroundStyle(.red)
-                    }
-                }
-                Button {
-                    Task { await create() }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if phase == .creating { ProgressView().padding(.trailing, 6) }
-                        Text(phase == .creating ? (oauth ? "Authorizing…" : "Creating…") : (oauth ? "Authorize in browser" : "Create client"))
-                            .bold()
-                        Spacer()
-                    }
-                }
-                .disabled(phase == .creating || phase == .testing || cleanName.isEmpty || missingRequired)
-                if phase == .creating && oauth {
-                    Button("Cancel", role: .cancel) { OAuthBroker.shared.cancel() }
-                }
-                if case .failed(let message) = phase {
-                    Text(message).font(.footnote).foregroundStyle(.red)
-                }
-                if phase == .done {
-                    Label("Client created", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                 }
             }
         }
@@ -249,7 +251,7 @@ private struct ClientForm: View {
         )
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(option.name).font(.caption).foregroundStyle(.secondary)
+                Text(Friendly.fieldLabel(option.name) ?? option.name).font(.caption).foregroundStyle(.secondary)
                 if !option.required { Text("optional").font(.caption2).foregroundStyle(.tertiary) }
                 Spacer()
                 if !option.examples.isEmpty {
@@ -286,21 +288,21 @@ private struct ClientForm: View {
                 ))
                 .font(.footnote)
             } else if option.secret {
-                SecureField(option.shortHelp, text: binding)
+                SecureField(Friendly.fieldLabel(option.name) ?? option.shortHelp, text: binding)
             } else {
-                TextField(option.defaultValue.isEmpty ? option.shortHelp : option.defaultValue, text: binding)
+                TextField(option.defaultValue.isEmpty ? (Friendly.fieldLabel(option.name) ?? option.shortHelp) : option.defaultValue, text: binding)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(option.type == "int" || option.name == "port" ? .numbersAndPunctuation : .default)
             }
-            if !option.shortHelp.isEmpty && option.type != "bool" {
+            if Friendly.fieldLabel(option.name) == nil, !option.shortHelp.isEmpty, option.type != "bool" {
                 Text(option.shortHelp).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
             }
         }
     }
 
     private func suggestedName() -> String {
-        let base = type.name
+        let base = RemoteService.sanitizeName(Friendly.providerName(type.id, fallback: type.name))
         var candidate = base
         var n = 2
         while store.clients.contains(where: { $0.name == candidate }) {
@@ -336,8 +338,13 @@ private struct ClientForm: View {
         let target = cleanName
         guard !target.isEmpty else { return }
         if store.clients.contains(where: { $0.name == target }) {
-            phase = .failed(String(localized: "A client named \(target) already exists."))
+            phase = .invalid(String(localized: "A client named \(target) already exists."))
             return
+        }
+        // Check the details first so a typo never leaves a broken client.
+        if !oauth {
+            await test()
+            if case .failed = testResult { return }
         }
         phase = .creating
         if oauth { OAuthBroker.shared.begin() }
@@ -350,7 +357,7 @@ private struct ClientForm: View {
             // A half-created OAuth remote has no token; don't leave it behind.
             try? await RemoteService.delete(target)
             createdName = nil
-            phase = .failed(RcloneArgs.firstMeaningfulLine(error.localizedDescription))
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -359,7 +366,7 @@ private struct ClientForm: View {
         if oauth { OAuthBroker.shared.begin() }
         defer { if oauth { OAuthBroker.shared.end() } }
         do {
-            question = try await RemoteService.answer(name: name, question: current, result: answer)
+            question = try await RemoteService.reply(name: name, question: current, result: answer)
             if question == nil { await finish() } else { phase = .editing }
         } catch {
             question = nil

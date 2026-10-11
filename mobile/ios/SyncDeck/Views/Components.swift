@@ -94,6 +94,7 @@ struct EndpointLabel: View {
         } icon: {
             switch endpoint.kind {
             case .appFolder: Image(systemName: "iphone")
+            case .photos: Image(systemName: "photo.on.rectangle")
             case .external: Image(systemName: "folder")
             case .remote:
                 if let name = endpoint.remoteName, let type = store?.client(name)?.type {
@@ -163,8 +164,8 @@ struct NoticesSection: View {
                 ForEach(alerts, id: \.key) { name, alert in
                     Banner(
                         style: .warning,
-                        text: String(localized: "Session expired for \(name). Re-authorize to keep syncing.") + "\n" + alert.message,
-                        actionTitle: onReauthorize == nil ? nil : "Re-authorize",
+                        text: String(localized: "Session expired for \(name). Re-authorize to keep syncing."),
+                        actionTitle: onReauthorize == nil ? nil : "Sign in again",
                         action: onReauthorize.map { handler in { handler(name) } }
                     )
                 }

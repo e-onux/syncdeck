@@ -7,6 +7,37 @@ start the rclone CLI as a child process. The app talks to the engine through
 rclone's remote-control API (`sync/sync`, `operations/list`, `config/create`
 and so on) instead of command-line flags.
 
+## Free up space: photos to the cloud
+
+The main phone use case. A "Photos to cloud" profile backs up the photo
+library and can then remove the backed-up items from the iPhone:
+
+1. Photos and videos older than the "keep on iPhone" window are exported in
+   small batches (originals, edited versions and the video half of Live
+   Photos) to a temporary folder, into `year/month/` folders with their
+   original names and capture dates.
+2. Each batch is uploaded, then rclone compares every file with the cloud
+   copy (`operations/check`: size, plus checksum where the provider has one).
+3. Only items whose every file matched are offered for removal. iOS asks the
+   person to confirm and keeps removed items in Recently Deleted for 30 days.
+   Anything that failed to export, upload or verify stays on the device.
+4. In the background iOS cannot ask, so verified items wait and the app shows
+   a "Remove from iPhone" button the next time it is opened.
+
+`PhotoBackupTests` covers this against a real upload (WebDAV), including the
+unhappy paths: unreadable originals, incomplete uploads, a declined
+confirmation and background runs.
+
+## Keeping rclone out of sight
+
+People should not need to know rclone. Provider names are plain ("OneDrive",
+"Windows share / NAS"), OAuth providers show only a name and a "Sign in"
+button, rclone's follow-up setup questions are answered with safe defaults
+(`RemoteService.autoAnswer`) and only shown when a real choice is needed,
+errors are explained in plain language with the raw text under "Details", and
+option keys, tokens and extra rclone arguments live under "Advanced" or
+"Technical details".
+
 ## Build
 
 ```bash

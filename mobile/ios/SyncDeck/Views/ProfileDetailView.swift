@@ -31,27 +31,10 @@ struct ProfileDetailView: View {
                     .font(.headline)
             }
 
-            Section("Route") {
-                endpointRow(.source, title: "Source", endpoint: draft.source)
-                Button {
-                    (draft.source, draft.destination) = (draft.destination, draft.source)
-                } label: {
-                    Label("Swap source and destination", systemImage: "arrow.up.arrow.down")
-                }
-                .disabled(isRunning)
-                endpointRow(.destination, title: "Destination", endpoint: draft.destination)
-            }
-
-            Section {
-                Picker("Sync mode", selection: $draft.mode) {
-                    ForEach(SyncMode.allCases) { mode in
-                        Label(mode.title, systemImage: mode.symbol).tag(mode)
-                    }
-                }
-                .pickerStyle(.navigationLink)
-                Text(draft.mode.detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            if draft.isPhotoBackup {
+                photoSections
+            } else {
+                folderSections
             }
 
             Section {
@@ -65,24 +48,13 @@ struct ProfileDetailView: View {
                 }
                 Toggle("Run automatically", isOn: $draft.enabled)
             } header: {
-                Text("Schedule & options")
+                Text("Schedule")
             } footer: {
                 Text("Enabled profiles run at this frequency when you open the app and in the background when iOS allows it. iOS decides the exact time.")
             }
 
-            Section {
-                optionToggle(.checksum, title: "Verify after transfer", hint: "Compare checksums")
-                optionToggle(.dryrun, title: "Dry run first", hint: "Show changes without writing anything")
-                optionToggle(.bwlimit, title: "Bandwidth limit", hint: "Limit to 8 MiB/s while running")
-                DisclosureGroup("Extra rclone arguments", isExpanded: $showAdvanced) {
-                    TextField("--exclude \"*.tmp\" --transfers 2", text: $draft.extraArgs, axis: .vertical)
-                        .font(.system(.footnote, design: .monospaced))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Text("Supported: filters (--exclude, --include, --max-age, --min-size…), --transfers, --checkers, --ignore-existing, --update, --size-only, --max-delete, --backup-dir and the toggles above.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            if !draft.isPhotoBackup {
+                advancedSection
             }
 
             runSection
@@ -130,7 +102,7 @@ struct ProfileDetailView: View {
             }
         }
         .sheet(item: $picking) { side in
-            EndpointPicker(current: side == .source ? draft.source : draft.destination) { picked in
+            EndpointPicker(current: side == .source ? draft.source : draft.destination, cloudOnly: draft.isPhotoBackup) { picked in
                 if side == .source { draft.source = picked } else { draft.destination = picked }
             }
         }
@@ -144,12 +116,105 @@ struct ProfileDetailView: View {
             guard !loaded, let profile = store.profile(profileID) else { return }
             draft = profile
             loaded = true
-            showAdvanced = !RcloneArgs.Option.allCases.reduce(profile.extraArgs) {
-                RcloneArgs.setFlag($0, $1.flag, on: false)
-            }.isEmpty
+            showAdvanced = !profile.extraArgs.isEmpty
         }
         .onChange(of: draft) { _, value in
             if loaded { store.upsert(value) }
+        }
+    }
+
+    @ViewBuilder private var folderSections: some View {
+        Section("Route") {
+            endpointRow(.source, title: "Source", endpoint: draft.source)
+            Button {
+                (draft.source, draft.destination) = (draft.destination, draft.source)
+            } label: {
+                Label("Swap source and destination", systemImage: "arrow.up.arrow.down")
+            }
+            .disabled(isRunning)
+            endpointRow(.destination, title: "Destination", endpoint: draft.destination)
+        }
+
+        Section {
+            Picker("Sync mode", selection: $draft.mode) {
+                ForEach(SyncMode.allCases) { mode in
+                    Label(mode.title, systemImage: mode.symbol).tag(mode)
+                }
+            }
+            .pickerStyle(.navigationLink)
+            Text(draft.mode.detail)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    static let keepPresets: [(Int, LocalizedStringKey)] = [
+        (0, "Nothing, move everything"), (7, "Last 7 days"), (30, "Last 30 days"), (90, "Last 3 months"), (365, "Last year"),
+    ]
+
+    private var photoOptions: Binding<PhotoOptions> {
+        Binding(get: { draft.photo ?? PhotoOptions() }, set: { draft.photo = $0 })
+    }
+
+    @ViewBuilder private var photoSections: some View {
+        Section {
+            HStack {
+                Label("Photos", systemImage: "photo.on.rectangle")
+                Spacer()
+                Image(systemName: "arrow.right").foregroundStyle(.secondary)
+            }
+            endpointRow(.destination, title: "Save to", endpoint: draft.destination)
+        } footer: {
+            Text("Photos and videos are stored in year and month folders, with their original names and dates.")
+        }
+
+        Section {
+            Toggle("Include videos", isOn: photoOptions.includeVideos)
+            Toggle(isOn: photoOptions.deleteAfterUpload) {
+                VStack(alignment: .leading) {
+                    Text("Remove from iPhone after upload")
+                    Text("Only after each file is verified in the cloud").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Picker("Keep on iPhone", selection: photoOptions.keepRecentDays) {
+                ForEach(Self.keepPresets, id: \.0) { days, title in
+                    Text(title).tag(days)
+                }
+            }
+        } header: {
+            Text("Free up space")
+        } footer: {
+            Text("iOS asks you to confirm before anything is removed. Removed items stay in Recently Deleted for 30 days; empty it in Photos to get the space back right away. If iCloud Photos is on, removing also removes them from iCloud Photos.")
+        }
+
+        if !store.pendingDeletion(profileID).isEmpty {
+            Section {
+                Button {
+                    Task { _ = try? await runner.removeBackedUpPhotos(profileID: profileID) }
+                } label: {
+                    Label("Remove \(store.pendingDeletion(profileID).count) backed-up items from iPhone", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var advancedSection: some View {
+        Section {
+            DisclosureGroup("Advanced options", isExpanded: $showAdvanced) {
+                optionToggle(.checksum, title: "Verify after transfer", hint: "Compare checksums")
+                optionToggle(.dryrun, title: "Dry run first", hint: "Show changes without writing anything")
+                optionToggle(.bwlimit, title: "Bandwidth limit", hint: "Limit to 8 MiB/s while running")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Extra rclone arguments").font(.subheadline)
+                    TextField("--exclude \"*.tmp\" --transfers 2", text: $draft.extraArgs, axis: .vertical)
+                        .font(.system(.footnote, design: .monospaced))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Text("Supported: filters (--exclude, --include, --max-age, --min-size…), --transfers, --checkers, --ignore-existing, --update, --size-only, --max-delete, --backup-dir and the toggles above.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
@@ -199,16 +264,18 @@ struct ProfileDetailView: View {
                     }
                 }
             }
-            Section("Live log") {
+            Section("Activity") {
                 LogView(lines: progress.log)
             }
         } else if let last = store.lastRun(profileID) {
             Section("Last run") {
                 RunRecordRow(record: last)
-                LogView(lines: last.output.components(separatedBy: .newlines).suffix(40).map { $0 })
+                if !last.ok {
+                    ErrorDetail(raw: last.output)
+                }
             }
         } else {
-            Section("Live log") {
+            Section("Activity") {
                 Text("No runs yet. Try the profile with \"Run now\".")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -223,12 +290,19 @@ struct LiveProgressView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(progress.stopping ? "Stopping…" : "Syncing")
+                Text(progress.stopping ? String(localized: "Stopping…") : (progress.phase ?? String(localized: "Syncing")))
                     .font(.headline)
                 Spacer()
                 if let fraction = progress.fraction {
                     Text(fraction, format: .percent.precision(.fractionLength(0)))
                         .font(.headline.monospacedDigit())
+                }
+            }
+            if progress.itemsTotal > 0 {
+                ProgressView(value: Double(progress.itemsDone), total: Double(progress.itemsTotal)) {
+                    Text("\(progress.itemsDone) of \(progress.itemsTotal) photos and videos")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             if let fraction = progress.fraction {
@@ -349,7 +423,13 @@ struct RunRecordRow: View {
 
     private var summary: String {
         let s = record.stats
-        if !record.ok { return RcloneArgs.firstMeaningfulLine(record.output) }
+        if !record.ok { return Friendly.error(record.output) }
+        if s.photosVerified > 0 || s.photosRemoved > 0 {
+            var parts = [String(localized: "\(s.photosVerified) backed up")]
+            if s.photosRemoved > 0 { parts.append(String(localized: "\(s.photosRemoved) removed")) }
+            if s.bytesFreed > 0 { parts.append(String(localized: "\(RcloneArgs.humanBytes(s.bytesFreed)) freed")) }
+            return parts.joined(separator: " · ")
+        }
         return "\(s.files) · \(RcloneArgs.humanBytes(s.bytes)) · \(RcloneArgs.humanDuration(s.elapsed))"
     }
 }

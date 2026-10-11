@@ -10,15 +10,28 @@ struct ProfilesView: View {
         NavigationStack(path: $path) {
             List {
                 NoticesSection(onReauthorize: { reconnecting = $0 })
+                PendingPhotoRemovalSection()
 
                 if store.profiles.isEmpty {
                     ContentUnavailableView {
                         Label("No profiles yet", systemImage: "arrow.triangle.2.circlepath")
                     } description: {
-                        Text("A profile syncs a folder on this iPhone with a cloud location. Add a client first, then create a profile.")
+                        Text("Free up space by moving photos and videos to your cloud, or keep a folder in sync.")
                     } actions: {
-                        Button("New profile", action: addProfile)
+                        VStack(spacing: 10) {
+                            Button {
+                                addProfile(photos: true)
+                            } label: {
+                                Label("Free up space", systemImage: "photo.on.rectangle.angled")
+                            }
                             .buttonStyle(.borderedProminent)
+                            Button {
+                                addProfile(photos: false)
+                            } label: {
+                                Label("Sync a folder", systemImage: "folder")
+                            }
+                            .buttonStyle(.bordered)
+                        }
                     }
                     .listRowBackground(Color.clear)
                 } else {
@@ -54,7 +67,18 @@ struct ProfilesView: View {
             .navigationTitle("Profiles")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: addProfile) {
+                    Menu {
+                        Button {
+                            addProfile(photos: true)
+                        } label: {
+                            Label("Free up space: photos to cloud", systemImage: "photo.on.rectangle.angled")
+                        }
+                        Button {
+                            addProfile(photos: false)
+                        } label: {
+                            Label("Sync a folder", systemImage: "folder")
+                        }
+                    } label: {
                         Label("New profile", systemImage: "plus")
                     }
                 }
@@ -70,10 +94,16 @@ struct ProfilesView: View {
         }
     }
 
-    private func addProfile() {
-        var profile = SyncProfile(name: String(localized: "New profile"))
+    private func addProfile(photos: Bool) {
+        var profile = SyncProfile(name: photos ? String(localized: "Photos to cloud") : String(localized: "New profile"))
+        if photos {
+            profile.source = .photos
+            profile.mode = .copy
+            profile.photo = PhotoOptions()
+            profile.intervalMinutes = 1440
+        }
         if let first = store.clients.first {
-            profile.destination = .remote("\(first.name):")
+            profile.destination = .remote(photos ? "\(first.name):\(String(localized: "iPhone Photos"))" : "\(first.name):")
         }
         store.upsert(profile)
         path.append(profile.id)
@@ -135,6 +165,49 @@ struct CompactLabelStyle: LabelStyle {
         HStack(spacing: 4) {
             configuration.icon.foregroundStyle(.secondary)
             configuration.title
+        }
+    }
+}
+
+/// Photos that are safely in the cloud but still on the iPhone because iOS
+/// could not ask for confirmation at the time (background run) or the user
+/// declined. One tap removes them.
+struct PendingPhotoRemovalSection: View {
+    @Environment(AppStore.self) private var store
+    @Environment(SyncRunner.self) private var runner
+    @State private var working = false
+
+    var body: some View {
+        let profiles = store.profiles.filter { !store.pendingDeletion($0.id).isEmpty }
+        if !profiles.isEmpty {
+            Section {
+                ForEach(profiles) { profile in
+                    let count = store.pendingDeletion(profile.id).count
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label {
+                            Text("\(count) photos and videos are safely in your cloud and can be removed from this iPhone.")
+                                .font(.subheadline)
+                        } icon: {
+                            Image(systemName: "checkmark.icloud.fill").foregroundStyle(.green)
+                        }
+                        Button {
+                            Task {
+                                working = true
+                                _ = try? await runner.removeBackedUpPhotos(profileID: profile.id)
+                                working = false
+                            }
+                        } label: {
+                            HStack {
+                                Text("Remove from iPhone")
+                                if working { ProgressView().padding(.leading, 4) }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(working)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
         }
     }
 }

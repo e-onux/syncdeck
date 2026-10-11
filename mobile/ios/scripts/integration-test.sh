@@ -28,7 +28,16 @@ rclone serve sftp "$WORK/sftp" --addr "127.0.0.1:$SFTP_PORT" --user syncdeck --p
 SFTP_PID=$!
 sleep 2
 
-if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then DEST="id=$DEVICE"; else DEST="platform=iOS Simulator,name=$DEVICE"; fi
+if [[ "$DEVICE" =~ ^[0-9A-F-]{36}$ ]]; then
+  UDID="$DEVICE"
+else
+  UDID="$(xcrun simctl list devices available -j | python3 -c "import json,sys; n=sys.argv[1]; print(next(d['udid'] for v in json.load(sys.stdin)['devices'].values() for d in v if d['name']==n))" "$DEVICE")"
+fi
+DEST="id=$UDID"
+# The photo backup tests read the simulator's photo library. Recent
+# simulators may still ask once; the real-library test skips without access.
+xcrun simctl boot "$UDID" 2>/dev/null || true
+xcrun simctl privacy "$UDID" grant photos com.sidrelabs.syncdeck || true
 
 # xcodebuild forwards TEST_RUNNER_* variables to the test process without the prefix.
 TEST_RUNNER_SYNCDECK_IT_WEBDAV_URL="http://127.0.0.1:$DAV_PORT" \

@@ -10,6 +10,29 @@ struct PersistedState: Codable {
     var backgroundSync = true
     var theme: AppTheme = .system
     var accent: AccentName = .mint
+    /// Photo backups: asset ids already uploaded and verified, per profile, so
+    /// a later run (or one that keeps photos on the device) skips them.
+    var uploadedPhotos: [String: [String]] = [:]
+    /// Verified items whose removal from the device is still waiting for the
+    /// user's confirmation (iOS asks; it cannot be done in the background).
+    var pendingPhotoDeletion: [String: [String]] = [:]
+
+    init() {}
+
+    /// Every field is optional on disk so a state file written by an older
+    /// version (without newer fields) still loads instead of being discarded.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        profiles = try c.decodeIfPresent([SyncProfile].self, forKey: .profiles) ?? []
+        history = try c.decodeIfPresent([String: [RunRecord]].self, forKey: .history) ?? [:]
+        authAlerts = try c.decodeIfPresent([String: AuthAlert].self, forKey: .authAlerts) ?? [:]
+        dismissedAdvisories = try c.decodeIfPresent([String].self, forKey: .dismissedAdvisories) ?? []
+        backgroundSync = try c.decodeIfPresent(Bool.self, forKey: .backgroundSync) ?? true
+        theme = try c.decodeIfPresent(AppTheme.self, forKey: .theme) ?? .system
+        accent = try c.decodeIfPresent(AccentName.self, forKey: .accent) ?? .mint
+        uploadedPhotos = try c.decodeIfPresent([String: [String]].self, forKey: .uploadedPhotos) ?? [:]
+        pendingPhotoDeletion = try c.decodeIfPresent([String: [String]].self, forKey: .pendingPhotoDeletion) ?? [:]
+    }
 }
 
 enum AppTheme: String, Codable, CaseIterable, Identifiable {
@@ -100,6 +123,8 @@ final class AppStore {
     func deleteProfile(_ id: String) {
         state.profiles.removeAll { $0.id == id }
         state.history[id] = nil
+        state.uploadedPhotos[id] = nil
+        state.pendingPhotoDeletion[id] = nil
         save()
     }
 
@@ -149,6 +174,26 @@ final class AppStore {
                 return last.addingTimeInterval(Double(profile.intervalMinutes * 60))
             }
             .min()
+    }
+
+    // MARK: - Photo backup bookkeeping
+
+    func uploadedPhotos(_ id: String) -> Set<String> { Set(state.uploadedPhotos[id] ?? []) }
+
+    func markUploaded(_ ids: [String], profile: String) {
+        var set = uploadedPhotos(profile)
+        set.formUnion(ids)
+        state.uploadedPhotos[profile] = Array(set)
+        save()
+    }
+
+    func pendingDeletion(_ id: String) -> [String] { state.pendingPhotoDeletion[id] ?? [] }
+
+    var totalPendingDeletion: Int { state.pendingPhotoDeletion.values.reduce(0) { $0 + $1.count } }
+
+    func setPendingDeletion(_ ids: [String], profile: String) {
+        state.pendingPhotoDeletion[profile] = ids.isEmpty ? nil : ids
+        save()
     }
 
     // MARK: - Auth alerts

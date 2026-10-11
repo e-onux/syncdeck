@@ -19,6 +19,10 @@ struct RunProgress: Equatable {
     var elapsed: Double = 0
     var transfers: [TransferEvent] = []
     var log: [String] = []
+    /// Photo backups: what is happening now and how many items are done.
+    var phase: String?
+    var itemsDone = 0
+    var itemsTotal = 0
 
     var fraction: Double? {
         guard totalBytes > 0 else { return nil }
@@ -35,6 +39,13 @@ final class SyncRunner {
     private(set) var running: [String: RunProgress] = [:]
     private var stopRequested: Set<String> = []
     private let store: AppStore
+    /// Swapped in tests; PhotoKit asks the user before every deletion.
+    var photoLibrary: PhotoLibrary = PhotoKitLibrary.shared
+    /// Items exported, uploaded and verified per round. Small enough that
+    /// the temporary copies never need much free space on a full phone.
+    var photoBatchSize = 25
+    /// iOS can only show its delete confirmation while the app is on screen.
+    var canAskToDelete: () -> Bool = { UIApplication.shared.applicationState == .active }
 
     init(store: AppStore) {
         self.store = store
@@ -69,14 +80,14 @@ final class SyncRunner {
         let started = Date()
         var record: RunRecord
         do {
-            record = try await execute(profile, resync: false)
+            record = try await (profile.isPhotoBackup ? executePhotos(profile) : execute(profile, resync: false))
         } catch {
             // A bisync pair with no prior listings needs a --resync baseline.
             // rclone says so in its log; a pair that never completed a run is
             // treated the same way, since resync copies both ways and never
             // deletes anything.
             let neverSynced = !store.history(profile.id).contains { $0.ok }
-            if profile.mode == .bisync,
+            if profile.mode == .bisync, !profile.isPhotoBackup,
                RcloneArgs.needsBisyncResync(error.localizedDescription) || neverSynced,
                !stopRequested.contains(profile.id) {
                 append(profile.id, String(localized: "First bisync run: establishing a baseline (resync)…"))
@@ -184,6 +195,188 @@ final class SyncRunner {
         }
 
         append(profile.id, "\(profile.mode.rawValue) \(profile.source.displayPath) → \(profile.destination.displayPath)\(dryRun ? " (dry run)" : "")")
+        let (status, engineLines) = try await runJob(profile, method: method, params: params)
+
+        var success = status["success"] as? Bool ?? false
+        var error = (status["error"] as? String) ?? ""
+        var lines = running[profile.id]?.log ?? []
+        if profile.mode == .check, let output = status["output"] as? [String: Any] {
+            lines.append(contentsOf: Self.checkSummary(output))
+            // Differences are not an rc error: check reports them in its output.
+            if output["success"] as? Bool == false {
+                success = false
+                error = output["status"] as? String ?? error
+            }
+        }
+        let progress = running[profile.id]
+        lines.append(Self.summaryLine(progress))
+        if !success {
+            // Log lines may still be hopping to the main actor; take them from
+            // the job's own buffer so the error always carries rclone's reason.
+            let missing = engineLines.filter { !lines.contains($0) }
+            throw EngineError(method: method, status: 500, message: (lines + missing + [error]).joined(separator: "\n"))
+        }
+        return RunRecord(ok: true, output: lines.joined(separator: "\n"), finishedAt: Date(), stats: stats(from: progress), dryRun: dryRun)
+    }
+
+    // MARK: - Photo backup ("free up space")
+
+    enum PhotoBackupError: LocalizedError {
+        case noAccess, notCloud
+
+        var errorDescription: String? {
+            switch self {
+            case .noAccess: String(localized: "SyncDeck has no access to your photos. Allow it in Settings › SyncDeck › Photos.")
+            case .notCloud: String(localized: "Choose a cloud folder as the destination for your photos.")
+            }
+        }
+    }
+
+    private func setPhase(_ id: String, _ phase: String?, done: Int? = nil, total: Int? = nil) {
+        guard var progress = running[id] else { return }
+        progress.phase = phase
+        if let done { progress.itemsDone = done }
+        if let total { progress.itemsTotal = total }
+        running[id] = progress
+    }
+
+    /// Photos and videos to the cloud, in small rounds: export a batch to a
+    /// temporary folder, upload it, then have rclone compare every file with
+    /// what is now in the cloud (size, and checksum where the provider has
+    /// one). Only items whose every file matched count as backed up, and only
+    /// those are ever offered for removal from the device.
+    private func executePhotos(_ profile: SyncProfile) async throws -> RunRecord {
+        let options = profile.photo ?? PhotoOptions()
+        guard profile.destination.isCloud else { throw PhotoBackupError.notCloud }
+        guard await photoLibrary.requestAccess() else { throw PhotoBackupError.noAccess }
+        let destination = try EndpointResolver.resolve(profile.destination)
+        defer { destination.close() }
+
+        let cutoff = options.keepRecentDays > 0 ? Date().addingTimeInterval(-Double(options.keepRecentDays) * 86_400) : nil
+        let done = store.uploadedPhotos(profile.id)
+        let candidates = await photoLibrary.items(includeVideos: options.includeVideos, createdBefore: cutoff)
+        let todo = candidates.filter { !done.contains($0.id) }
+        append(profile.id, String(localized: "\(todo.count) photos and videos to back up"))
+        setPhase(profile.id, nil, done: 0, total: todo.count)
+
+        let staging = Paths.caches.appendingPathComponent("photo-staging/\(profile.id)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: staging) }
+
+        var verified: [PhotoItem] = []
+        var failed = 0
+        var stats = RunStats()
+        var processed = 0
+        for start in stride(from: 0, to: todo.count, by: max(1, photoBatchSize)) {
+            if stopRequested.contains(profile.id) { throw CancellationError() }
+            let batch = Array(todo[start..<min(todo.count, start + photoBatchSize)])
+            try? FileManager.default.removeItem(at: staging)
+            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+
+            setPhase(profile.id, String(localized: "Preparing photos…"))
+            var exported: [PhotoItem] = []
+            for item in batch {
+                do {
+                    try await photoLibrary.export(item, to: staging)
+                    exported.append(item)
+                } catch {
+                    failed += 1
+                    append(profile.id, "✗ " + String(localized: "Could not read \(item.resources.first?.relativePath ?? item.id): \(error.localizedDescription)"))
+                }
+            }
+            guard !exported.isEmpty else { processed += batch.count; continue }
+
+            setPhase(profile.id, String(localized: "Uploading…"))
+            let (copyStatus, copyLog) = try await runJob(profile, method: "sync/copy", params: [
+                "srcFs": staging.path, "dstFs": destination.fsPath, "createEmptySrcDirs": false,
+            ])
+            if let p = running[profile.id] {
+                stats.bytes += p.bytes
+                stats.files += p.files
+                stats.errors += p.errors
+                stats.elapsed += p.elapsed
+            }
+            if copyStatus["success"] as? Bool != true {
+                if stopRequested.contains(profile.id) { throw CancellationError() }
+                let reason = (copyLog + [copyStatus["error"] as? String ?? ""]).joined(separator: "\n")
+                throw EngineError(method: "sync/copy", status: 500, message: reason)
+            }
+
+            // Independent check after the upload: every file must exist in the
+            // cloud with the same size (and checksum where both sides have one).
+            setPhase(profile.id, String(localized: "Verifying…"))
+            let (checkStatus, _) = try await runJob(profile, method: "operations/check", params: [
+                "srcFs": staging.path, "dstFs": destination.fsPath, "oneWay": true, "combined": true,
+            ])
+            let combined = (checkStatus["output"] as? [String: Any])?["combined"] as? [String] ?? []
+            let matched = Self.matchedPaths(combined)
+            var verifiedNow: [String] = []
+            for item in exported {
+                if item.resources.allSatisfy({ matched.contains($0.relativePath) }) {
+                    verified.append(item)
+                    verifiedNow.append(item.id)
+                } else {
+                    failed += 1
+                    append(profile.id, "✗ " + String(localized: "Not verified, kept on iPhone: \(item.resources.first?.relativePath ?? item.id)"))
+                }
+            }
+            store.markUploaded(verifiedNow, profile: profile.id)
+            processed += batch.count
+            setPhase(profile.id, nil, done: processed)
+            try? FileManager.default.removeItem(at: staging)
+        }
+
+        stats.photosVerified = verified.count
+        append(profile.id, String(localized: "\(verified.count) backed up and verified in the cloud"))
+
+        if options.deleteAfterUpload {
+            let pending = Array(Set(store.pendingDeletion(profile.id) + verified.map(\.id)))
+            store.setPendingDeletion(pending, profile: profile.id)
+            // iOS only shows its delete confirmation while the app is open.
+            if !pending.isEmpty, canAskToDelete() {
+                setPhase(profile.id, String(localized: "Waiting for your confirmation…"))
+                let removed = try await removeBackedUpPhotos(profileID: profile.id)
+                stats.photosRemoved = removed
+                if removed > 0 {
+                    stats.bytesFreed = Double(verified.reduce(0) { $0 + $1.totalSize })
+                    append(profile.id, String(localized: "\(removed) removed from iPhone (in Recently Deleted for 30 days)"))
+                } else {
+                    append(profile.id, String(localized: "Removal from iPhone was not confirmed; nothing was deleted."))
+                }
+            }
+        }
+
+        var lines = running[profile.id]?.log ?? []
+        lines.append(Self.summaryLine(running[profile.id]))
+        if failed > 0 {
+            throw EngineError(method: "photos", status: 500, message: (lines + [String(localized: "\(failed) items could not be backed up and stay on the iPhone.")]).joined(separator: "\n"))
+        }
+        return RunRecord(ok: true, output: lines.joined(separator: "\n"), finishedAt: Date(), stats: stats)
+    }
+
+    /// Asks iOS to remove the profile's verified, still-pending items. Only
+    /// ids recorded as uploaded and verified are ever passed on.
+    @discardableResult
+    func removeBackedUpPhotos(profileID: String) async throws -> Int {
+        let uploaded = store.uploadedPhotos(profileID)
+        let ids = store.pendingDeletion(profileID).filter { uploaded.contains($0) }
+        guard !ids.isEmpty else { return 0 }
+        guard try await photoLibrary.delete(ids) else { return 0 }
+        store.setPendingDeletion([], profile: profileID)
+        return ids.count
+    }
+
+    /// Paths rclone's check reported as identical ("= path").
+    nonisolated static func matchedPaths(_ combined: [String]) -> Set<String> {
+        Set(combined.compactMap { line in
+            line.hasPrefix("= ") ? String(line.dropFirst(2)) : nil
+        })
+    }
+
+    /// Starts an async rc job for a profile, follows its progress until it
+    /// ends and returns the final job status plus the engine log lines seen
+    /// while it ran.
+    private func runJob(_ profile: SyncProfile, method: String, params: [String: Any]) async throws -> (status: [String: Any], log: [String]) {
+        let engine = RcloneEngine.shared
         // rclone reports why a run failed (e.g. bisync needing --resync) only
         // in its log; mirror warnings and errors into this run's live log.
         let profileID = profile.id
@@ -195,6 +388,8 @@ final class SyncRunner {
         }
         defer { EngineLog.shared.unsubscribe(logSubscription) }
 
+        var params = params
+        params["_async"] = true
         let started = try await engine.call(method, params)
         guard let jobID = (started["jobid"] as? NSNumber)?.intValue else {
             throw EngineError(method: method, status: 500, message: "No job id returned")
@@ -218,29 +413,15 @@ final class SyncRunner {
         }
         await refreshStats(profile: profile, group: group, seen: &seenTransfers)
         try? await engine.call("core/stats-delete", ["group": group])
-
-        var success = status["success"] as? Bool ?? false
-        var error = (status["error"] as? String) ?? ""
-        var lines = running[profile.id]?.log ?? []
-        if profile.mode == .check, let output = status["output"] as? [String: Any] {
-            lines.append(contentsOf: Self.checkSummary(output))
-            // Differences are not an rc error: check reports them in its output.
-            if output["success"] as? Bool == false {
-                success = false
-                error = output["status"] as? String ?? error
-            }
-        }
-        let progress = running[profile.id]
-        lines.append(Self.summaryLine(progress))
-        if !success {
-            // rclone logs the reason just before the job ends; give the pipe
-            // reader a moment, then take the lines from the buffer (they may
-            // still be hopping to the main actor) so the error carries it.
+        if status["success"] as? Bool != true {
+            // The reason is logged just before the job ends; let the pipe catch up.
             try? await Task.sleep(for: .milliseconds(300))
-            let missing = engineLines.all.filter { !lines.contains($0) }
-            throw EngineError(method: method, status: 500, message: (lines + missing + [error]).joined(separator: "\n"))
         }
-        return RunRecord(ok: true, output: lines.joined(separator: "\n"), finishedAt: Date(), stats: stats(from: progress), dryRun: dryRun)
+        if var progress = running[profile.id] {
+            progress.jobID = nil
+            running[profile.id] = progress
+        }
+        return (status, engineLines.all)
     }
 
     private func refreshStats(profile: SyncProfile, group: String, seen: inout Set<String>) async {

@@ -61,7 +61,7 @@ private struct ClientRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(client.name).font(.headline)
                 HStack(spacing: 6) {
-                    Text(store.backendType(client.type)?.description ?? client.type)
+                    Text(Friendly.providerName(client.type, fallback: store.backendType(client.type)?.description))
                     if let free = quota?.free {
                         Text("· \(RcloneArgs.humanBytes(free)) free")
                     }
@@ -91,7 +91,7 @@ struct ClientDetailView: View {
     @State private var testState: TestState = .idle
     @State private var settings: [String: String] = [:]
     @State private var confirmDelete = false
-    @State private var reconnecting: String?
+    @State private var reconnecting: ReconnectTarget?
     @State private var error: String?
 
     enum TestState: Equatable { case idle, running, ok, failed(String) }
@@ -105,9 +105,11 @@ struct ClientDetailView: View {
         List {
             Section {
                 LabeledContent("Name", value: client.name)
-                LabeledContent("Type", value: store.backendType(client.type)?.description ?? client.type)
-                if let alert = store.authAlerts[client.name] {
-                    Banner(style: .warning, text: String(localized: "Session expired") + ": " + alert.message)
+                LabeledContent("Type", value: Friendly.providerName(client.type, fallback: store.backendType(client.type)?.description))
+                if store.authAlerts[client.name] != nil {
+                    Banner(style: .warning, text: Friendly.error("token expired"), actionTitle: "Sign in again") {
+                        reconnecting = ReconnectTarget(name: client.name, signIn: true)
+                    }
                 }
             }
 
@@ -142,7 +144,7 @@ struct ClientDetailView: View {
                     }
                 }
                 if case .failed(let message) = testState {
-                    Text(message).font(.footnote).foregroundStyle(.red)
+                    ErrorDetail(raw: message)
                 }
                 NavigationLink {
                     FolderBrowser(source: .remote(client.name), path: "", onPick: { _ in })
@@ -151,20 +153,28 @@ struct ClientDetailView: View {
                 }
                 if isOAuth {
                     Button {
-                        reconnecting = client.name
+                        reconnecting = ReconnectTarget(name: client.name, signIn: true)
                     } label: {
-                        Label("Re-authorize", systemImage: "arrow.clockwise")
+                        Label("Sign in again", systemImage: "person.crop.circle.badge.checkmark")
                     }
                 }
             }
 
-            if !settings.isEmpty {
-                Section("Settings") {
+            Section {
+                DisclosureGroup("Technical details") {
                     ForEach(settings.sorted { $0.key < $1.key }, id: \.key) { key, value in
                         LabeledContent(key) {
                             Text(Self.isSecretKey(key) ? "••••••" : value)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
+                        }
+                        .font(.footnote)
+                    }
+                    if isOAuth {
+                        Button {
+                            reconnecting = ReconnectTarget(name: client.name, signIn: false)
+                        } label: {
+                            Label("Run setup again", systemImage: "slider.horizontal.3")
                         }
                     }
                 }
@@ -179,11 +189,7 @@ struct ClientDetailView: View {
         }
         .navigationTitle(client.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            quota = await RemoteService.about(client.name)
-            quotaLoaded = true
-            settings = await RemoteService.configSection(client.name).filter { $0.key != "type" }
-        }
+        .task { await load() }
         .confirmationDialog(
             String(localized: "Delete client \"\(client.name)\"? This cannot be undone."),
             isPresented: $confirmDelete,
@@ -202,12 +208,20 @@ struct ClientDetailView: View {
                 }
             }
         }
-        .reconnectSheet(name: $reconnecting)
+        .sheet(item: $reconnecting, onDismiss: { Task { await load() } }) { target in
+            ReconnectView(name: target.name, signIn: target.signIn)
+        }
     }
 
     static func isSecretKey(_ key: String) -> Bool {
         ["token", "pass", "password", "password2", "secret", "key", "client_secret", "secret_access_key", "session_token"]
             .contains { key == $0 || key.hasSuffix("_\($0)") }
+    }
+
+    private func load() async {
+        quota = await RemoteService.about(client.name)
+        quotaLoaded = true
+        settings = await RemoteService.configSection(client.name).filter { $0.key != "type" }
     }
 
     private func test() async {
@@ -231,7 +245,7 @@ private struct ReconnectSheet: ViewModifier {
             get: { name.map(ReconnectTarget.init) },
             set: { name = $0?.name }
         )) { target in
-            ReconnectView(name: target.name)
+            ReconnectView(name: target.name, signIn: true)
         }
     }
 
@@ -239,6 +253,13 @@ private struct ReconnectSheet: ViewModifier {
         let name: String
         var id: String { name }
     }
+}
+
+struct ReconnectTarget: Identifiable {
+    let name: String
+    /// false: keep the token and only answer the setup questions again.
+    let signIn: Bool
+    var id: String { "\(name)|\(signIn)" }
 }
 
 extension View {
@@ -251,6 +272,7 @@ private struct ReconnectView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     let name: String
+    var signIn = true
 
     @State private var phase: Phase = .authorizing
     @State private var question: RemoteService.ConfigQuestion?
@@ -260,31 +282,35 @@ private struct ReconnectView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
+            Group {
                 if let question {
                     ConfigQuestionForm(question: question, busy: answering) { answer in
                         Task { await respond(answer, to: question) }
                     }
                 } else {
+                    VStack(spacing: 16) {
                     switch phase {
                     case .authorizing:
                         ProgressView()
-                        Text("Authorizing…").font(.headline)
-                        Text("Sign in in the browser sheet; SyncDeck stores the refreshed token in its local engine config.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        if signIn {
+                            Text("Waiting for sign-in…").font(.headline)
+                            Text("Sign in in the browser sheet; SyncDeck stores the refreshed token in its local engine config.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     case .done:
                         Image(systemName: "checkmark.circle.fill").font(.largeTitle).foregroundStyle(.green)
-                        Text("Authorized").font(.headline)
+                        Text(signIn ? "Authorized" : "Client updated").font(.headline)
                     case .failed(let message):
                         Image(systemName: "xmark.octagon.fill").font(.largeTitle).foregroundStyle(.red)
-                        Text(message).font(.footnote).multilineTextAlignment(.center)
+                        ErrorDetail(raw: message)
                     }
+                    }
+                    .padding(24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -304,10 +330,10 @@ private struct ReconnectView: View {
         OAuthBroker.shared.begin()
         defer { OAuthBroker.shared.end() }
         do {
-            question = try await RemoteService.reconnect(name)
+            question = try await (signIn ? RemoteService.reconnect(name) : RemoteService.reconfigure(name))
             if question == nil { finish() }
         } catch {
-            phase = .failed(RcloneArgs.firstMeaningfulLine(error.localizedDescription))
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -319,11 +345,11 @@ private struct ReconnectView: View {
             OAuthBroker.shared.end()
         }
         do {
-            question = try await RemoteService.answer(name: name, question: current, result: answer)
+            question = try await RemoteService.reply(name: name, question: current, result: answer)
             if question == nil { finish() }
         } catch {
             question = nil
-            phase = .failed(RcloneArgs.firstMeaningfulLine(error.localizedDescription))
+            phase = .failed(error.localizedDescription)
         }
     }
 
@@ -339,51 +365,67 @@ private struct ReconnectView: View {
 }
 
 /// Renders one rclone config question (an option with help text, examples and
-/// a default) and returns the user's answer.
+/// a default) and returns the user's answer. A question that only carries an
+/// error (rclone's ConfigError) shows the error and continues with an empty
+/// answer, which makes rclone ask its previous question again.
 struct ConfigQuestionForm: View {
     let question: RemoteService.ConfigQuestion
     var busy = false
     let onSubmit: (String) -> Void
     @State private var value = ""
 
+    private var option: BackendOption { question.option }
+
+    /// rclone can list the same id twice (OneDrive returns a drive under two
+    /// names); keep the first so only one row shows as selected.
+    private var examples: [BackendOption.Example] {
+        var seen: Set<String> = []
+        return option.examples.filter { seen.insert($0.value).inserted }
+    }
+
     var body: some View {
         Form {
             Section {
-                Text(question.option.help)
-                    .font(.footnote)
+                if !option.help.isEmpty {
+                    Text(option.help).font(.footnote)
+                }
                 if let error = question.error {
                     Text(error).font(.footnote).foregroundStyle(.red)
                 }
             }
-            Section {
-                if !question.option.examples.isEmpty {
-                    Picker(question.option.name, selection: $value) {
-                        ForEach(question.option.examples, id: \.value) { example in
-                            VStack(alignment: .leading) {
-                                Text(example.value)
-                                if !example.help.isEmpty {
-                                    Text(example.help).font(.caption).foregroundStyle(.secondary)
+            if question.hasOption {
+                Section {
+                    if !examples.isEmpty {
+                        Picker(option.name, selection: $value) {
+                            ForEach(examples, id: \.value) { example in
+                                // rclone puts the readable name (a drive or site
+                                // name) in the help and an id in the value.
+                                VStack(alignment: .leading) {
+                                    Text(example.help.isEmpty ? example.value : example.help)
+                                    if !example.help.isEmpty {
+                                        Text(example.value).font(.caption).foregroundStyle(.secondary)
+                                    }
                                 }
+                                .tag(example.value)
                             }
-                            .tag(example.value)
                         }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
-                if question.option.examples.isEmpty || !question.option.exclusive {
-                    if question.option.secret {
-                        SecureField(question.option.name, text: $value)
-                    } else {
-                        TextField(question.option.name, text: $value)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+                    if examples.isEmpty || !option.exclusive {
+                        if option.secret {
+                            SecureField(option.name, text: $value)
+                        } else {
+                            TextField(option.name, text: $value)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
                     }
                 }
             }
             Section {
                 Button {
-                    onSubmit(value)
+                    onSubmit(question.hasOption ? value : "")
                 } label: {
                     HStack {
                         Text("Continue").bold()
@@ -396,10 +438,10 @@ struct ConfigQuestionForm: View {
                 .disabled(busy)
             }
         }
-        .onAppear {
-            value = question.option.defaultValue.isEmpty
-                ? (question.option.examples.first?.value ?? "")
-                : question.option.defaultValue
+        // A new question reuses this view; start from its own default instead
+        // of carrying over the previous answer.
+        .task(id: "\(question.state)|\(option.name)|\(question.error ?? "")") {
+            value = option.defaultValue.isEmpty ? (examples.first?.value ?? "") : option.defaultValue
         }
     }
 }

@@ -10,7 +10,7 @@
    </BuildAction>
    <TestAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES">
       <Testables>
-         <TestableReference skipped = "NO" parallelizable = "YES">
+         <TestableReference skipped = "NO" parallelizable = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "AA000000000000000000000C" BuildableName = "SyncDeckTests.xctest" BlueprintName = "SyncDeckTests" ReferencedContainer = "container:SyncDeck.xcodeproj">
             </BuildableReference>
          </TestableReference>

@@ -17,6 +17,8 @@ struct Endpoint: Codable, Hashable, Sendable {
         case appFolder
         case external
         case remote
+        /// The device photo library (Photos app), backed up file by file.
+        case photos
     }
 
     var kind: Kind
@@ -35,6 +37,8 @@ struct Endpoint: Codable, Hashable, Sendable {
         Endpoint(kind: .remote, path: path)
     }
 
+    static let photos = Endpoint(kind: .photos, path: "")
+
     var isEmpty: Bool { kind == .remote && path.isEmpty }
     var isCloud: Bool { kind == .remote && !path.isEmpty }
     var remoteName: String? { kind == .remote ? RcloneArgs.remoteName(of: path) : nil }
@@ -43,7 +47,11 @@ struct Endpoint: Codable, Hashable, Sendable {
         switch kind {
         case .appFolder: path.isEmpty ? "SyncDeck" : "SyncDeck/\(path)"
         case .external: path
-        case .remote: path
+        case .photos: String(localized: "Photos")
+        case .remote:
+            // "onedrive:Backups/2026" reads as "onedrive › Backups › 2026".
+            path.replacingOccurrences(of: ":", with: path.hasSuffix(":") ? "" : " › ")
+                .replacingOccurrences(of: "/", with: " › ")
         }
     }
 }
@@ -60,6 +68,10 @@ struct SyncProfile: Codable, Identifiable, Hashable, Sendable {
     var extraArgs: String = ""
     /// Background cadence in minutes. 0 = manual only.
     var intervalMinutes: Int = 0
+    /// Set when the source is the photo library ("free up space").
+    var photo: PhotoOptions?
+
+    var isPhotoBackup: Bool { source.kind == .photos }
 
     var remoteNames: [String] {
         [source.remoteName, destination.remoteName].compactMap { $0 }
@@ -74,6 +86,14 @@ struct SyncProfile: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
+struct PhotoOptions: Codable, Hashable, Sendable {
+    var includeVideos = true
+    /// Remove photos from the iPhone once they are verified in the cloud.
+    var deleteAfterUpload = true
+    /// Keep the most recent days on the device. 0 = back up everything.
+    var keepRecentDays = 30
+}
+
 struct RunStats: Codable, Hashable, Sendable {
     var bytes: Double = 0
     var files: Int = 0
@@ -81,6 +101,35 @@ struct RunStats: Codable, Hashable, Sendable {
     var deletes: Int = 0
     var errors: Int = 0
     var elapsed: Double = 0
+    /// Photo backups: items uploaded and verified, and items removed.
+    var photosVerified: Int = 0
+    var photosRemoved: Int = 0
+    var bytesFreed: Double = 0
+
+    init() {}
+
+    init(bytes: Double, files: Int, checks: Int, deletes: Int, errors: Int, elapsed: Double) {
+        self.bytes = bytes
+        self.files = files
+        self.checks = checks
+        self.deletes = deletes
+        self.errors = errors
+        self.elapsed = elapsed
+    }
+
+    /// Tolerates history written before the photo fields existed.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bytes = try c.decodeIfPresent(Double.self, forKey: .bytes) ?? 0
+        files = try c.decodeIfPresent(Int.self, forKey: .files) ?? 0
+        checks = try c.decodeIfPresent(Int.self, forKey: .checks) ?? 0
+        deletes = try c.decodeIfPresent(Int.self, forKey: .deletes) ?? 0
+        errors = try c.decodeIfPresent(Int.self, forKey: .errors) ?? 0
+        elapsed = try c.decodeIfPresent(Double.self, forKey: .elapsed) ?? 0
+        photosVerified = try c.decodeIfPresent(Int.self, forKey: .photosVerified) ?? 0
+        photosRemoved = try c.decodeIfPresent(Int.self, forKey: .photosRemoved) ?? 0
+        bytesFreed = try c.decodeIfPresent(Double.self, forKey: .bytesFreed) ?? 0
+    }
 }
 
 struct RunRecord: Codable, Identifiable, Hashable, Sendable {

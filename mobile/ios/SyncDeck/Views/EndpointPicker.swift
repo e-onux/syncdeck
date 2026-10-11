@@ -7,6 +7,7 @@ struct EndpointPicker: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     let current: Endpoint
+    var cloudOnly = false
     let onPick: (Endpoint) -> Void
 
     @State private var importing = false
@@ -15,6 +16,7 @@ struct EndpointPicker: View {
     var body: some View {
         NavigationStack {
             List {
+                if !cloudOnly {
                 Section {
                     NavigationLink {
                         FolderBrowser(source: .local, path: current.kind == .appFolder ? current.path : "", onPick: pick)
@@ -30,6 +32,7 @@ struct EndpointPicker: View {
                     Text("Local")
                 } footer: {
                     Text("The SyncDeck folder appears in the Files app under On My iPhone. Folders from Files, iCloud Drive or a USB drive are remembered with permission.")
+                }
                 }
 
                 Section("Cloud") {
@@ -106,6 +109,8 @@ struct FolderBrowser: View {
     @State private var entries: [RemoteEntry] = []
     @State private var loading = true
     @State private var error: String?
+    /// The chosen folder does not exist yet; it is created on the first run.
+    @State private var notCreatedYet = false
     @State private var newFolderPrompt = false
     @State private var newFolderName = ""
     @State private var creating = false
@@ -132,6 +137,10 @@ struct FolderBrowser: View {
             Section {
                 if loading {
                     HStack { ProgressView(); Text("Loading…").foregroundStyle(.secondary) }
+                } else if notCreatedYet {
+                    Label("This folder does not exist yet. It is created on the first run.", systemImage: "folder.badge.plus")
+                        .foregroundStyle(.secondary)
+                        .font(.footnote)
                 } else if let error {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
@@ -145,12 +154,15 @@ struct FolderBrowser: View {
                             path = path.isEmpty ? entry.name : "\(path)/\(entry.name)"
                         } label: {
                             HStack {
-                                Label(entry.name, systemImage: "folder.fill")
+                                Label {
+                                    Text(entry.name).foregroundStyle(.primary)
+                                } icon: {
+                                    Image(systemName: "folder.fill").foregroundStyle(.tint)
+                                }
                                 Spacer()
                                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                             }
                         }
-                        .foregroundStyle(.primary)
                     } else {
                         HStack {
                             Label(entry.name, systemImage: "doc")
@@ -223,6 +235,7 @@ struct FolderBrowser: View {
     private func load() async {
         loading = true
         error = nil
+        notCreatedYet = false
         defer { loading = false }
         do {
             switch source {
@@ -246,7 +259,12 @@ struct FolderBrowser: View {
             }
         } catch {
             entries = []
-            self.error = String(localized: "This location could not be listed.") + " " + RcloneArgs.firstMeaningfulLine(error.localizedDescription)
+            let raw = error.localizedDescription.lowercased()
+            if !path.isEmpty, raw.contains("not found") {
+                notCreatedYet = true
+            } else {
+                self.error = Friendly.error(error.localizedDescription)
+            }
         }
     }
 
@@ -266,7 +284,7 @@ struct FolderBrowser: View {
             }
             path = child
         } catch {
-            self.error = RcloneArgs.firstMeaningfulLine(error.localizedDescription)
+            self.error = Friendly.error(error.localizedDescription)
         }
     }
 }

@@ -136,18 +136,21 @@ enum RemoteService {
         var state: String
         var option: BackendOption
         var error: String?
+        /// False when rclone only reported an error for this step.
+        var hasOption = true
         var id: String { state }
     }
 
     static func parseQuestion(_ out: [String: Any]) -> ConfigQuestion? {
         guard let state = out["State"] as? String, !state.isEmpty else { return nil }
         let raw = out["Option"] as? [String: Any] ?? [:]
-        let option = parseOption(raw) ?? BackendOption(
+        let parsed = parseOption(raw)
+        let option = parsed ?? BackendOption(
             name: "value", help: "", required: false, advanced: false, secret: false,
             type: "string", defaultValue: "", exclusive: false, examples: []
         )
         let error = (out["Error"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        return ConfigQuestion(state: state, option: option, error: error)
+        return ConfigQuestion(state: state, option: option, error: error, hasOption: parsed != nil)
     }
 
     /// Ephemeral answers that keep rclone's config flow non-interactive on a
@@ -170,7 +173,7 @@ enum RemoteService {
             "parameters": params,
             "opt": ["obscure": true, "nonInteractive": true],
         ])
-        return parseQuestion(out)
+        return try await settle(name: name, parseQuestion(out))
     }
 
     static func answer(name: String, question: ConfigQuestion, result: String) async throws -> ConfigQuestion? {
@@ -191,7 +194,59 @@ enum RemoteService {
             "parameters": oauthDefaults,
             "opt": ["nonInteractive": true],
         ])
-        return parseQuestion(out)
+        return try await settle(name: clean, parseQuestion(out))
+    }
+
+    /// The person's answer to a question, then any automatic follow-ups.
+    static func reply(name: String, question: ConfigQuestion, result: String) async throws -> ConfigQuestion? {
+        try await settle(name: name, answer(name: name, question: question, result: result))
+    }
+
+    /// Answers rclone's follow-up setup questions that have a safe default, so
+    /// people only see a question when a real choice is needed. Known ones:
+    /// keep using rclone's shared app id, use the personal OneDrive and its
+    /// main drive, confirm the drive found, no shared/team drive.
+    static func autoAnswer(_ question: ConfigQuestion) -> String? {
+        guard question.hasOption, question.error == nil else { return nil }
+        let option = question.option
+        switch option.name {
+        case "config_shared_client_id", "config_drive_ok": return "true"
+        case "config_change_team_drive": return "false"
+        case "config_type" where option.examples.contains(where: { $0.value == "onedrive" }): return "onedrive"
+        default: break
+        }
+        if !option.defaultValue.isEmpty { return option.defaultValue }
+        if option.exclusive, let first = option.examples.first { return first.value }
+        return nil
+    }
+
+    /// Feeds automatic answers until rclone is done or asks something that
+    /// needs the person. Bounded so a backend that keeps asking cannot loop.
+    static func settle(name: String, _ question: ConfigQuestion?) async throws -> ConfigQuestion? {
+        var current = question
+        var answered: Set<String> = []
+        while let q = current, let answer = autoAnswer(q), answered.count < 12 {
+            let key = "\(q.state)|\(q.option.name)"
+            guard !answered.contains(key) else { break }
+            answered.insert(key)
+            current = try await self.answer(name: name, question: q, result: answer)
+        }
+        return current
+    }
+
+    /// Runs an existing remote's setup questions again without a new sign-in
+    /// (keeps the token), e.g. to pick a different OneDrive drive or to finish
+    /// a setup that was interrupted after the browser step.
+    static func reconfigure(_ name: String) async throws -> ConfigQuestion? {
+        let clean = name.hasSuffix(":") ? String(name.dropLast()) : name
+        var parameters = oauthDefaults
+        parameters["config_refresh_token"] = "false"
+        let out = try await engine.call("config/update", [
+            "name": clean,
+            "parameters": parameters,
+            "opt": ["nonInteractive": true],
+        ])
+        return try await settle(name: clean, parseQuestion(out))
     }
 
     static func configSection(_ name: String) async -> [String: String] {

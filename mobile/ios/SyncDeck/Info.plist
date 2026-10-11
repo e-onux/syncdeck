@@ -23,6 +23,8 @@
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SyncDeck backs up your photos and videos to your cloud and, if you choose, removes them from this iPhone once they are safely stored there.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>SyncDeck connects to servers on your local network (SFTP, SMB, WebDAV, FTP) when a client points at one.</string>
 	<key>UIBackgroundModes</key>

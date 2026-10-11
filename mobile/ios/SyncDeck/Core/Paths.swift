@@ -70,6 +70,9 @@ enum EndpointResolver {
             let url = Paths.appFolder(endpoint.path)
             try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
             return ResolvedEndpoint(fsPath: url.path)
+        case .photos:
+            // The photo library is not a folder; the photo backup exports it.
+            throw Failure.empty
         case .external:
             guard let data = endpoint.bookmark else { throw Failure.staleBookmark(endpoint.path) }
             var stale = false

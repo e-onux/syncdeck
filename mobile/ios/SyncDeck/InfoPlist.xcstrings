@@ -56,6 +56,58 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryUsageDescription": {
+      "localizations": {
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck fotoğraf ve videolarını buluta yedekler ve istersen, orada güvenle saklandıktan sonra bu iPhone'dan kaldırır."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck sichert deine Fotos und Videos in deiner Cloud und entfernt sie auf Wunsch von diesem iPhone, sobald sie dort sicher gespeichert sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck hace copia de tus fotos y vídeos en tu nube y, si quieres, los quita de este iPhone cuando ya están guardados allí de forma segura."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck maakt een back-up van je foto's en video's in je cloud en verwijdert ze desgewenst van deze iPhone zodra ze daar veilig staan."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck 会将你的照片和视频备份到云端，并可在它们安全存储后从此 iPhone 上移除。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck は写真とビデオをクラウドにバックアップし、安全に保存されたら必要に応じてこの iPhone から削除します。"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SyncDeck создаёт резервную копию ваших фото и видео в облаке и, по вашему желанию, удаляет их с этого iPhone, когда они надёжно сохранены."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحفظ SyncDeck نسخة من صورك ومقاطع الفيديو في سحابتك، ويزيلها من هذا الـ iPhone إن أردت بعد حفظها هناك بأمان."
+          }
+        }
+      }
     }
   }
 }
