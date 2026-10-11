@@ -13,6 +13,14 @@ package syncdeckengine
 import (
 	"github.com/rclone/rclone/librclone/librclone"
 
+	// librclone only registers the core/config/job rc methods. The transfer
+	// methods the app drives live in these packages and register themselves
+	// on import: operations/* (list, mkdir, about, check...), sync/* (sync,
+	// copy, move) and sync/bisync.
+	_ "github.com/rclone/rclone/cmd/bisync"
+	_ "github.com/rclone/rclone/fs/operations"
+	_ "github.com/rclone/rclone/fs/sync"
+
 	// Curated backends. Keep alphabetical.
 	_ "github.com/rclone/rclone/backend/b2"
 	_ "github.com/rclone/rclone/backend/box"
