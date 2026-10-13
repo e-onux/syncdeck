@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Puts Rclone.xcframework into mobile/ios/Frameworks.
 #
-#   scripts/fetch-engine.sh            download the engine-v<version> release
+#   scripts/fetch-engine.sh            download the engine-v<version>[-r<revision>] release
 #   scripts/fetch-engine.sh --build    build it locally with gomobile instead
 #
 # <version> comes from app/rclone.version, so the phone app links the same
-# rclone release the desktop app bundles. The release is produced by
+# rclone release the desktop app bundles; <revision> from mobile/engine/REVISION
+# (the engine's own API version). The release is produced by
 # .github/workflows/rclone-mobile.yml; a download is checked against the
 # .sha256 published next to it.
 set -euo pipefail
@@ -13,6 +14,7 @@ set -euo pipefail
 IOS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_DIR="$(cd "$IOS_DIR/../.." && pwd)"
 VERSION="$(tr -d '[:space:]' < "$REPO_DIR/app/rclone.version")"
+REVISION="$(tr -d '[:space:]' < "$REPO_DIR/mobile/engine/REVISION")"
 DEST="$IOS_DIR/Frameworks"
 MODE="${1:-download}"
 
@@ -39,8 +41,10 @@ build_locally() {
 }
 
 download() {
-  local base="https://github.com/e-onux/syncdeck/releases/download/engine-v$VERSION"
-  echo "Downloading rclone mobile engine v$VERSION"
+  local tag="engine-v$VERSION"
+  [[ "$REVISION" == 1 ]] || tag="$tag-r$REVISION"
+  local base="https://github.com/e-onux/syncdeck/releases/download/$tag"
+  echo "Downloading rclone mobile engine v$VERSION (revision $REVISION)"
   curl -fL --retry 5 -C - -o "$WORK/Rclone.xcframework.zip" "$base/Rclone.xcframework.zip"
   curl -fsSL -o "$WORK/expected.sha256" "$base/Rclone.xcframework.zip.sha256"
   local expected actual

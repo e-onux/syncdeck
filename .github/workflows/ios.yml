@@ -2,7 +2,7 @@ name: iOS app
 
 # Builds the phone app and runs its tests: unit tests plus the engine
 # integration suite against throwaway WebDAV/SFTP servers on the runner.
-# The rclone engine comes from the engine-v<version> release made by
+# The rclone engine comes from the engine-v<version>[-r<revision>] release made by
 # rclone-mobile.yml; if that release does not exist yet it is built here.
 
 on:

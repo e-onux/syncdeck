@@ -11,6 +11,10 @@
 package syncdeckengine
 
 import (
+	"context"
+
+	"github.com/rclone/rclone/fs"
+	"github.com/rclone/rclone/fs/config"
 	"github.com/rclone/rclone/librclone/librclone"
 
 	// librclone only registers the core/config/job rc methods. The transfer
@@ -48,6 +52,23 @@ type RPCResult struct {
 // Initialize starts the engine. Call once before any RPC.
 func Initialize() {
 	librclone.Initialize()
+	// There is no terminal to type a config password into: a missing or
+	// wrong key must fail the call instead of blocking on a prompt.
+	fs.GetConfig(context.Background()).AskPassword = false
+}
+
+// SetConfigKey makes the engine open and save its config file encrypted with
+// this password, using rclone's own config encryption (NaCl secretbox). Call
+// it before config/setpath; a config that is still plain text is encrypted on
+// its next save (see SaveConfig).
+func SetConfigKey(password string) error {
+	return config.SetConfigPassword(password)
+}
+
+// SaveConfig writes the loaded config now, e.g. to encrypt an existing plain
+// file right after SetConfigKey.
+func SaveConfig() {
+	config.SaveConfig()
 }
 
 // RPC runs an rclone remote-control method with a JSON input string and returns

@@ -46,7 +46,7 @@ scripts/fetch-engine.sh          # or: scripts/fetch-engine.sh --build (needs Go
 open SyncDeck.xcodeproj
 ```
 
-`fetch-engine.sh` downloads `Rclone.xcframework` from the `engine-v<version>`
+`fetch-engine.sh` downloads `Rclone.xcframework` from the `engine-v<version>` (plus `-r<revision>` from `mobile/engine/REVISION` once the engine API changes)
 release made by `.github/workflows/rclone-mobile.yml`, where `<version>` is
 `app/rclone.version`, and checks its SHA-256. The framework is not committed.
 
