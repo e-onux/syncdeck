@@ -1,9 +1,12 @@
 name: rclone watch
 
 # Watches upstream rclone and, when a newer stable release appears, records it,
-# bumps the app patch version and pushes a tag, which triggers release.yml to
-# rebuild SyncDeck bundling the fresh engine. This is the "haber al + otomatik
-# release" half of the staleness strategy; the in-app advisory feed is the other.
+# bumps the app patch version, pushes a tag and then builds and publishes both
+# the desktop release (release.yml) and the phone engine (rclone-mobile.yml).
+# They are called directly rather than left to the tag push, because a push
+# made with the default GITHUB_TOKEN never triggers other workflows.
+# This is the "haber al + otomatik release" half of the staleness strategy; the
+# in-app advisory feed is the other.
 on:
   schedule:
     - cron: '17 6 * * *' # daily, ~06:17 UTC
@@ -15,15 +18,14 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    outputs:
+      newer: ${{ steps.cmp.outputs.newer }}
+      latest: ${{ steps.cmp.outputs.latest }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
-      # Use RELEASE_PAT (a fine-grained PAT with contents:write) so the tag we
-      # push actually triggers release.yml. The default GITHUB_TOKEN cannot
-      # trigger further workflow runs. Without RELEASE_PAT the tag is still
-      # created, but you must run release.yml manually (workflow_dispatch).
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Compare bundled rclone with upstream
         id: cmp
@@ -41,6 +43,7 @@ jobs:
           fi
 
       - name: Record + tag a release
+        id: tag
         if: steps.cmp.outputs.newer == 'true'
         run: |
           set -euo pipefail
@@ -55,13 +58,31 @@ jobs:
           git tag "v$NEWVER"
           git push origin HEAD:main
           git push origin "v$NEWVER"
+          echo "tag=v$NEWVER" >> "$GITHUB_OUTPUT"
           {
             echo "## rclone update detected"
             echo "- upstream rclone: **$LATEST**"
             echo "- previously bundled: ${{ steps.cmp.outputs.current }}"
-            echo "- tagged **v$NEWVER** → release.yml will rebuild SyncDeck"
+            echo "- tagged **v$NEWVER**: building the desktop release and the phone engine"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Up to date
         if: steps.cmp.outputs.newer != 'true'
         run: echo "rclone ${{ steps.cmp.outputs.current }} is current (upstream ${{ steps.cmp.outputs.latest }})." >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: check
+    if: needs.check.outputs.newer == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.check.outputs.tag }}
+    secrets: inherit
+
+  engine:
+    needs: check
+    if: needs.check.outputs.newer == 'true'
+    uses: ./.github/workflows/rclone-mobile.yml
+    with:
+      rclone_version: ${{ needs.check.outputs.latest }}
+      publish: true
+    secrets: inherit

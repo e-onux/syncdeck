@@ -4,7 +4,21 @@ on:
   push:
     tags:
       - 'v*'
+  # rclone-watch.yml calls this directly after tagging: a tag pushed with the
+  # default GITHUB_TOKEN does not trigger workflows, so the push trigger alone
+  # left automatic releases (v0.3.4 to v0.3.6) unbuilt.
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to build and publish, e.g. v0.3.7'
+        type: string
+        required: true
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and publish (blank = build only, no release)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -36,6 +50,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -73,13 +89,14 @@ jobs:
     name: Publish GitHub release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || inputs.tag != ''
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           files: artifacts/**/*
           generate_release_notes: true
           append_body: true

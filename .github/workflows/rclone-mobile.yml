@@ -30,6 +30,10 @@ on:
         type: string
         required: false
         default: ''
+      publish:
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: write
@@ -172,7 +176,7 @@ jobs:
   publish:
     name: Publish engine release
     needs: [resolve, ios, android]
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+    if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
