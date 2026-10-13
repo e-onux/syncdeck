@@ -13,25 +13,27 @@ struct ProfilesView: View {
                 PendingPhotoRemovalSection()
 
                 if store.profiles.isEmpty {
-                    ContentUnavailableView {
-                        Label("No profiles yet", systemImage: "arrow.triangle.2.circlepath")
-                    } description: {
-                        Text("Free up space by moving photos and videos to your cloud, or keep a folder in sync.")
-                    } actions: {
-                        VStack(spacing: 10) {
-                            Button {
-                                addProfile(photos: true)
-                            } label: {
-                                Label("Free up space", systemImage: "photo.on.rectangle.angled")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            Button {
-                                addProfile(photos: false)
-                            } label: {
-                                Label("Sync a folder", systemImage: "folder")
-                            }
-                            .buttonStyle(.bordered)
+                    EmptyState(
+                        symbol: "arrow.triangle.2.circlepath",
+                        title: "No profiles yet",
+                        message: "Free up space by moving photos and videos to your cloud, or keep a folder in sync."
+                    ) {
+                        Button {
+                            addProfile(photos: true)
+                        } label: {
+                            Label("Free up space", systemImage: "photo.on.rectangle.angled")
+                                .frame(maxWidth: .infinity)
+                                // The icon otherwise takes the accent colour and vanishes on the filled button.
+                                .foregroundStyle(.white)
                         }
+                        .buttonStyle(.borderedProminent)
+                        Button {
+                            addProfile(photos: false)
+                        } label: {
+                            Label("Sync a folder", systemImage: "folder")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                     }
                     .listRowBackground(Color.clear)
                 } else {

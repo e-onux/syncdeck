@@ -10,13 +10,15 @@ struct ClientsView: View {
             List {
                 NoticesSection(onReauthorize: { reconnecting = $0 })
                 if store.clients.isEmpty {
-                    ContentUnavailableView {
-                        Label("No clients yet", systemImage: "cloud")
-                    } description: {
-                        Text("No clients yet. Start by adding one.")
-                    } actions: {
-                        Button("New client") { showWizard = true }
-                            .buttonStyle(.borderedProminent)
+                    EmptyState(symbol: "cloud", title: "No clients yet", message: "No clients yet. Start by adding one.") {
+                        Button {
+                            showWizard = true
+                        } label: {
+                            Label("New client", systemImage: "plus")
+                                .frame(maxWidth: .infinity)
+                                .foregroundStyle(.white)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                     .listRowBackground(Color.clear)
                 } else {

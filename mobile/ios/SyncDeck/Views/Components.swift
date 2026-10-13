@@ -190,3 +190,39 @@ extension Date {
         RelativeDateTimeFormatter().localizedString(for: self, relativeTo: Date())
     }
 }
+
+/// Empty-list placeholder with full-width actions. ContentUnavailableView's
+/// action area sizes buttons to their minimum width on iOS 26, which squeezed
+/// the labels away, so this lays them out explicitly.
+struct EmptyState<Actions: View>: View {
+    let symbol: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    @ViewBuilder let actions: () -> Actions
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 44, weight: .regular))
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 4)
+            Text(title)
+                .font(.title2.bold())
+                .multilineTextAlignment(.center)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(spacing: 10) {
+                actions()
+            }
+            .controlSize(.large)
+            .padding(.top, 8)
+        }
+        .frame(maxWidth: 420)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .padding(.horizontal, 8)
+    }
+}
