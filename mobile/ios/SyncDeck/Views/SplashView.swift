@@ -12,7 +12,7 @@ struct SplashView: View {
 
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { context in
-            let t = reduceMotion ? SplashTimeline.total : context.date.timeIntervalSince(start)
+            let t = reduceMotion ? SplashTimeline.total : context.date.timeIntervalSince(start) * SplashTimeline.speed
             SplashFrame(t: t)
         }
         .ignoresSafeArea()
@@ -22,11 +22,13 @@ struct SplashView: View {
 
     /// When the wordmark has settled and the app may take over.
     static var duration: Duration {
-        .milliseconds(Int(SplashTimeline.handoff * 1000))
+        .milliseconds(Int(SplashTimeline.handoff / SplashTimeline.speed * 1000))
     }
 }
 
 enum SplashTimeline {
+    /// Playback rate against the design's timings (its `speed` control).
+    static let speed = 0.75
     /// Wave lengths: each pass over the three chevrons is quicker than the last.
     static let waves: [Double] = [0.36, 0.3, 0.26, 0.24, 0.22, 0.2, 0.18, 0.16]
     static let first = 0.3
