@@ -38,7 +38,7 @@ enum RemoteService {
         guard let name = raw["Name"] as? String else { return nil }
         if let hide = raw["Hide"] as? Int, hide != 0 { return nil }
         let examples = (raw["Examples"] as? [[String: Any]] ?? []).map {
-            BackendOption.Example(value: stringValue($0["Value"]), help: $0["Help"] as? String ?? "")
+            BackendOption.Example(value: stringValue($0["Value"]), help: $0["Help"] as? String ?? "", provider: $0["Provider"] as? String ?? "")
         }
         return BackendOption(
             name: name,
@@ -49,7 +49,8 @@ enum RemoteService {
             type: raw["Type"] as? String ?? "string",
             defaultValue: stringValue(raw["DefaultStr"] ?? raw["Default"]),
             exclusive: raw["Exclusive"] as? Bool ?? false,
-            examples: examples
+            examples: examples,
+            provider: raw["Provider"] as? String ?? ""
         )
     }
 

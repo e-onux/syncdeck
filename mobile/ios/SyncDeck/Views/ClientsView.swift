@@ -56,6 +56,8 @@ private struct ClientRow: View {
     @Environment(AppStore.self) private var store
     let client: RemoteClient
     @State private var quota: QuotaInfo?
+    /// "Wasabi" rather than "S3" when the remote came from a known service.
+    @State private var serviceName: String?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -63,7 +65,7 @@ private struct ClientRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(client.name).font(.headline)
                 HStack(spacing: 6) {
-                    Text(Friendly.providerName(client.type, fallback: store.backendType(client.type)?.description))
+                    Text(serviceName ?? Friendly.providerName(client.type, fallback: store.backendType(client.type)?.description))
                     if let free = quota?.free {
                         Text("· \(RcloneArgs.humanBytes(free)) free")
                     }
@@ -79,7 +81,11 @@ private struct ClientRow: View {
                     .accessibilityLabel(Text("Session expired"))
             }
         }
-        .task(id: client.name) { quota = await RemoteService.about(client.name) }
+        .task(id: client.name) {
+            let settings = await RemoteService.configSection(client.name)
+            serviceName = PresetCatalog.shared.preset(type: client.type, settings: settings)?.displayName
+            quota = await RemoteService.about(client.name)
+        }
     }
 }
 

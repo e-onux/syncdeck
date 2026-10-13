@@ -7,11 +7,17 @@ struct ClientWizard: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
-    @State private var type: BackendType?
+    @State private var choice: Choice?
+
+    /// A protocol/backend as rclone names it, or a well-known service on it.
+    struct Choice: Hashable {
+        var type: BackendType
+        var preset: Preset?
+    }
 
     var body: some View {
         NavigationStack {
-            ProviderList { type = $0 }
+            ProviderList { choice = $0 }
                 .navigationTitle("New client")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -19,8 +25,8 @@ struct ClientWizard: View {
                         Button("Cancel") { dismiss() }
                     }
                 }
-                .navigationDestination(item: $type) { type in
-                    ClientForm(type: type) { dismiss() }
+                .navigationDestination(item: $choice) { choice in
+                    ClientForm(type: choice.type, preset: choice.preset) { dismiss() }
                 }
         }
         .task {
@@ -29,7 +35,11 @@ struct ClientWizard: View {
     }
 
     /// Providers the desktop app puts first.
-    static let featured = ["drive", "onedrive", "dropbox", "s3", "b2", "sftp", "webdav", "smb", "pcloud", "box", "protondrive", "ftp", "crypt"]
+    static let featured = ["drive", "onedrive", "dropbox", "b2", "pcloud", "box", "protondrive", "sftp", "smb", "ftp", "crypt"]
+
+    /// Covered by the S3 and WebDAV service groups (including their "other
+    /// compatible service" entries), so not listed again on their own.
+    static let coveredByPresets: Set<String> = ["s3", "webdav"]
 
     static func isOAuth(_ type: BackendType) -> Bool {
         let names = Set(type.options.map(\.name))
@@ -52,13 +62,16 @@ struct ClientWizard: View {
 
 private struct ProviderList: View {
     @Environment(AppStore.self) private var store
-    let onSelect: (BackendType) -> Void
+    let onSelect: (ClientWizard.Choice) -> Void
     @State private var query = ""
+
+    private var catalog: PresetCatalog { .shared }
 
     private var filtered: [BackendType] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return store.backendTypes }
-        return store.backendTypes.filter {
+        let listed = store.backendTypes.filter { !ClientWizard.coveredByPresets.contains($0.id) }
+        guard !q.isEmpty else { return listed }
+        return listed.filter {
             Friendly.providerName($0.id, fallback: $0.description).lowercased().contains(q) || $0.name.lowercased().contains(q)
         }
     }
@@ -79,6 +92,16 @@ private struct ProviderList: View {
             if !featured.isEmpty {
                 Section("Popular") { ForEach(featured) { row($0) } }
             }
+            ForEach(catalog.groups) { group in
+                let items = catalog.presets(in: group.id).filter { preset in
+                    preset.matches(query) && store.backendType(preset.backend) != nil
+                }
+                if !items.isEmpty {
+                    Section(group.label.text) {
+                        ForEach(items) { presetRow($0) }
+                    }
+                }
+            }
             if !others.isEmpty {
                 Section("More services") { ForEach(others) { row($0) } }
             }
@@ -88,7 +111,7 @@ private struct ProviderList: View {
 
     private func row(_ type: BackendType) -> some View {
         Button {
-            onSelect(type)
+            onSelect(.init(type: type))
         } label: {
             HStack(spacing: 12) {
                 ProviderIcon(type: type.id)
@@ -100,11 +123,32 @@ private struct ProviderList: View {
             }
         }
     }
+
+    private func presetRow(_ preset: Preset) -> some View {
+        Button {
+            if let type = store.backendType(preset.backend) { onSelect(.init(type: type, preset: preset)) }
+        } label: {
+            HStack(spacing: 12) {
+                ProviderIcon(type: preset.icon ?? preset.backend)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(preset.displayName)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    Text(preset.displayTag)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+        }
+    }
 }
 
 private struct ClientForm: View {
     @Environment(AppStore.self) private var store
     let type: BackendType
+    var preset: Preset?
     let onDone: () -> Void
 
     @State private var name = ""
@@ -121,6 +165,7 @@ private struct ClientForm: View {
     private var oauth: Bool { ClientWizard.isOAuth(type) }
 
     private var mainOptions: [BackendOption] {
+        if let preset { return preset.options(in: type) }
         if let curated = ClientWizard.curatedFields[type.id] {
             return curated.compactMap { key in type.options.first { $0.name == key } }
         }
@@ -130,8 +175,13 @@ private struct ClientForm: View {
     }
 
     private var advancedOptions: [BackendOption] {
-        let main = Set(mainOptions.map(\.name))
-        return type.options.filter { !main.contains($0.name) && !Self.hidden.contains($0.name) }
+        let hidden = Set(mainOptions.map(\.name)).union((preset?.set ?? [:]).keys)
+        var seen: Set<String> = []
+        // One entry per option name, in the variant meant for this service.
+        return type.options.compactMap { option -> BackendOption? in
+            guard !hidden.contains(option.name), !Self.hidden.contains(option.name), seen.insert(option.name).inserted else { return nil }
+            return Presets.resolve(type.options, name: option.name, provider: preset?.provider)
+        }
     }
 
     /// Managed by the OAuth flow itself.
@@ -153,15 +203,16 @@ private struct ClientForm: View {
                 form
             }
         }
-        .navigationTitle(Friendly.providerName(type.id, fallback: type.description))
+        .navigationTitle(providerName)
         .navigationBarTitleDisplayMode(.inline)
         .interactiveDismissDisabled(phase == .creating)
         .onAppear {
             if name.isEmpty { name = suggestedName() }
+            if values.isEmpty, let prefill = preset?.prefill { values = prefill }
         }
     }
 
-    private var providerName: String { Friendly.providerName(type.id, fallback: type.description) }
+    private var providerName: String { preset?.displayName ?? Friendly.providerName(type.id, fallback: type.description) }
 
     private var form: some View {
         Form {
@@ -288,9 +339,9 @@ private struct ClientForm: View {
                 ))
                 .font(.footnote)
             } else if option.secret {
-                SecureField(Friendly.fieldLabel(option.name) ?? option.shortHelp, text: binding)
+                SecureField(preset?.hints?[option.name] ?? Friendly.fieldLabel(option.name) ?? option.shortHelp, text: binding)
             } else {
-                TextField(option.defaultValue.isEmpty ? (Friendly.fieldLabel(option.name) ?? option.shortHelp) : option.defaultValue, text: binding)
+                TextField(preset?.hints?[option.name] ?? (option.defaultValue.isEmpty ? (Friendly.fieldLabel(option.name) ?? option.shortHelp) : option.defaultValue), text: binding)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(option.type == "int" || option.name == "port" ? .numbersAndPunctuation : .default)
@@ -302,7 +353,7 @@ private struct ClientForm: View {
     }
 
     private func suggestedName() -> String {
-        let base = RemoteService.sanitizeName(Friendly.providerName(type.id, fallback: type.name))
+        let base = RemoteService.sanitizeName(preset?.displayName ?? Friendly.providerName(type.id, fallback: type.name))
         var candidate = base
         var n = 2
         while store.clients.contains(where: { $0.name == candidate }) {
@@ -312,8 +363,10 @@ private struct ClientForm: View {
         return candidate
     }
 
+    /// What the person entered plus the service's fixed settings.
     private var parameters: [String: String] {
         values.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
+            .merging(preset?.set ?? [:]) { _, fixed in fixed }
     }
 
     private func test() async {

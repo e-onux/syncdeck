@@ -79,6 +79,7 @@ integration suite. CI runs the same script (`.github/workflows/ios.yml`).
 | Dry run, checksum, bandwidth toggles | Same. Other extra arguments are mapped to rc options: filters, `--transfers`, `--checkers`, `--ignore-existing`, `--update`, `--size-only`, `--max-delete`, `--backup-dir` and more. Anything else is listed as ignored in the run log |
 | Client wizard with OAuth, connection test, quota, delete, reconnect | Same. OAuth opens the provider's sign-in in an in-app Safari sheet, using rclone's own local callback |
 | Wizard driven by `rclone config providers` | Same, limited to the backends compiled into the engine (`mobile/engine/syncdeck.go`). Follow-up questions (e.g. which OneDrive drive) are asked in the app |
+| Well-known services by name (S3-compatible, WebDAV, servers and NAS) | Same catalogue (`sources/provider-presets.json`, copied in by `scripts/build-strings.py`); `PresetTests` checks every entry against the linked engine |
 | Background scheduler (LaunchAgent) | `BGTaskScheduler`: scheduled profiles run when you open the app and when iOS grants background time. iOS picks the exact moment |
 | Run history | Last 20 runs per profile, with full output and share sheet |
 | Advisory feed | Same feed (`advisories.json`), same filtering rules |

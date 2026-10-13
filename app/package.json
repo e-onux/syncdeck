@@ -26,6 +26,7 @@
     "lint": "eslint .",
     "verify:build": "node scripts/verify-build.cjs",
     "test": "vitest run",
+    "check:presets": "node scripts/check-presets.mjs",
     "preview": "vite preview"
   },
   "build": {

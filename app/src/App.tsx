@@ -26,6 +26,8 @@ import {
   setFlag,
 } from './lib/rclone'
 import type { OptionId } from './lib/rclone'
+import { PRESETS, localized, presetTag, resolveOption, searchPresets } from './lib/presets'
+import type { Preset } from './lib/presets'
 import './App.css'
 
 const VERSION = '0.3.3'
@@ -319,6 +321,7 @@ const tr = {
   wizStep3: 'Gözden geçir & oluştur',
   wizTypePrompt: 'Bağlanmak istediğin bulut türünü seç. SyncDeck arka planda uygun yapılandırmayı oluşturur.',
   providerSearch: 'Client ara',
+  provServices: 'Bulut hizmetleri',
   wizClientName: 'İstemci adı',
   wizClientNamePh: 'ör. İş Drive',
   wizCredNote: 'Kimlik bilgileri yalnızca yerel motor yapılandırmanda saklanır, hiçbir yere gönderilmez.',
@@ -468,6 +471,7 @@ const en: Copy = {
   wizStep3: 'Review & create',
   wizTypePrompt: 'Pick the cloud type you want to connect. SyncDeck builds the right configuration behind the scenes.',
   providerSearch: 'Search clients',
+  provServices: 'Cloud services',
   wizClientName: 'Client name',
   wizClientNamePh: 'e.g. Work Drive',
   wizCredNote: 'Credentials are stored only in your local engine config and never sent anywhere.',
@@ -616,6 +620,7 @@ const de: Copy = {
   wizStep3: 'Prüfen & erstellen',
   wizTypePrompt: 'Wähle den Cloud-Typ, den du verbinden möchtest. SyncDeck erstellt die passende Konfiguration im Hintergrund.',
   providerSearch: 'Clients suchen',
+  provServices: 'Cloud-Dienste',
   wizClientName: 'Clientname',
   wizClientNamePh: 'z. B. Work Drive',
   wizCredNote: 'Zugangsdaten werden nur in deiner lokalen Engine-Konfiguration gespeichert und nirgendwohin gesendet.',
@@ -764,6 +769,7 @@ const es: Copy = {
   wizStep3: 'Revisar y crear',
   wizTypePrompt: 'Elige el tipo de nube que quieres conectar. SyncDeck crea la configuración adecuada en segundo plano.',
   providerSearch: 'Buscar clientes',
+  provServices: 'Servicios en la nube',
   wizClientName: 'Nombre del cliente',
   wizClientNamePh: 'p. ej. Work Drive',
   wizCredNote: 'Las credenciales se guardan solo en tu configuración local del motor y no se envían a ningún sitio.',
@@ -912,6 +918,7 @@ const zh: Copy = {
   wizStep3: '检查并创建',
   wizTypePrompt: '选择要连接的云类型。SyncDeck 会在后台构建正确的配置。',
   providerSearch: '搜索客户端',
+  provServices: '云服务',
   wizClientName: '客户端名称',
   wizClientNamePh: '例如 Work Drive',
   wizCredNote: '凭据只会保存在本地引擎配置中，不会发送到任何地方。',
@@ -1060,6 +1067,7 @@ const ja: Copy = {
   wizStep3: '確認して作成',
   wizTypePrompt: '接続したいクラウドの種類を選択してください。SyncDeck がバックグラウンドで適切な設定を作成します。',
   providerSearch: 'クライアントを検索',
+  provServices: 'クラウドサービス',
   wizClientName: 'クライアント名',
   wizClientNamePh: '例: Work Drive',
   wizCredNote: '認証情報はローカルのエンジン設定にのみ保存され、どこにも送信されません。',
@@ -1208,6 +1216,7 @@ const ru: Copy = {
   wizStep3: 'Проверить и создать',
   wizTypePrompt: 'Выберите тип облака для подключения. SyncDeck создаст нужную конфигурацию в фоне.',
   providerSearch: 'Поиск клиентов',
+  provServices: 'Облачные сервисы',
   wizClientName: 'Имя клиента',
   wizClientNamePh: 'например Work Drive',
   wizCredNote: 'Учетные данные сохраняются только в локальной конфигурации движка и никуда не отправляются.',
@@ -1356,6 +1365,7 @@ const nl: Copy = {
   wizStep3: 'Controleren en maken',
   wizTypePrompt: 'Kies het cloudtype dat je wilt verbinden. SyncDeck maakt op de achtergrond de juiste configuratie.',
   providerSearch: 'Clients zoeken',
+  provServices: 'Clouddiensten',
   wizClientName: 'Clientnaam',
   wizClientNamePh: 'bijv. Work Drive',
   wizCredNote: 'Inloggegevens worden alleen opgeslagen in je lokale engineconfiguratie en nergens heen gestuurd.',
@@ -1504,6 +1514,7 @@ const ar: Copy = {
   wizStep3: 'مراجعة وإنشاء',
   wizTypePrompt: 'اختر نوع السحابة التي تريد ربطها. ينشئ SyncDeck الإعداد المناسب في الخلفية.',
   providerSearch: 'بحث في العملاء',
+  provServices: 'الخدمات السحابية',
   wizClientName: 'اسم العميل',
   wizClientNamePh: 'مثال Work Drive',
   wizCredNote: 'تحفظ بيانات الاعتماد فقط في إعدادات المحرك المحلية ولا ترسل إلى أي مكان.',
@@ -1720,6 +1731,28 @@ function providerConfigFor(type: string | null, backendTypes: BackendType[]): Pr
   }
 }
 
+// Form fields for a well-known service: only what that service needs, each
+// taken from the rclone option variant meant for its provider.
+function presetConfig(preset: Preset, backendTypes: BackendType[]): ProviderConfig {
+  const backend = backendTypes.find((item) => item.id === preset.backend)
+  const provider = preset.set?.provider
+  const required = new Set(preset.required ?? [])
+  return {
+    oauth: false,
+    fields: preset.fields.map((key) => {
+      const option = backend ? resolveOption(backend.options, key, provider) : undefined
+      const fallback = PROVIDER_FIELDS[preset.backend]?.fields.find((field) => field.key === key)
+      return {
+        key,
+        label: fallback?.label ?? optionLabel(key),
+        ph: preset.hints?.[key] ?? (option ? optionPlaceholder(option.help, option.examples) : fallback?.ph),
+        secret: option?.secret ?? fallback?.secret ?? /pass|secret/.test(key),
+        optional: !required.has(key),
+      }
+    }),
+  }
+}
+
 /* ============================================================ inline icons (match the design) */
 type GlyphProps = { size?: number; sw?: number; children: ReactNode }
 const Glyph = ({ size = 18, sw = 1.7, children }: GlyphProps) => (
@@ -1841,6 +1874,7 @@ function App() {
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizStep, setWizStep] = useState(1)
   const [wizType, setWizType] = useState<ProviderId | null>(null)
+  const [wizPreset, setWizPreset] = useState<string | null>(null)
   const [wizName, setWizName] = useState('')
   const [wizFilter, setWizFilter] = useState('')
   const [wizFields, setWizFields] = useState<Record<string, string>>({})
@@ -2183,6 +2217,7 @@ function App() {
   function startWizard() {
     setWizStep(1)
     setWizType(null)
+    setWizPreset(null)
     setWizName('')
     setWizFilter('')
     setWizFields({})
@@ -2190,9 +2225,26 @@ function App() {
     setWizTest({ state: 'idle' })
     setWizardOpen(true)
   }
-  const providerCfg = providerConfigFor(wizType, backendTypes)
+  const preset = PRESETS.presets.find((p) => p.id === wizPreset)
+  const providerCfg = preset ? presetConfig(preset, backendTypes) : providerConfigFor(wizType, backendTypes)
   const wizBackend = backendTypes.find((p) => p.id === wizType)
-  const wizNameFinal = wizName || (wizBackend ? providerName(wizBackend) : '')
+  const wizTypeLabel = preset ? `${localized(preset.name, language)} · ${presetTag(preset, language)}` : wizBackend ? providerName(wizBackend) : ''
+  const wizNameFinal = wizName || (preset ? localized(preset.name, language) : wizBackend ? providerName(wizBackend) : '')
+  // Settings a well-known service needs but people never edit ({ provider: 'Wasabi' }).
+  const wizFixed: Record<string, string> = preset?.set ?? {}
+  const presetMatches = useMemo(() => searchPresets(wizFilter, language), [wizFilter, language])
+  function chooseBackend(id: string) {
+    setWizType(id)
+    setWizPreset(null)
+    setWizFields({})
+    setWizTest({ state: 'idle' })
+  }
+  function choosePreset(item: Preset) {
+    setWizType(item.backend)
+    setWizPreset(item.id)
+    setWizFields({ ...(item.prefill ?? {}) })
+    setWizTest({ state: 'idle' })
+  }
   const remoteSlug = wizNameFinal.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'yeni'
   const setWizField = (key: string, value: string) => {
     setWizFields((f) => ({ ...f, [key]: value }))
@@ -2204,9 +2256,10 @@ function App() {
       .filter((f) => (wizFields[f.key] || '').trim())
       .map((f) => `  \\\n    ${f.key} ${f.secret ? '••••••' : `"${wizFields[f.key]}"`}`)
       .join('')
+    const fixed = Object.entries(wizFixed).map(([key, value]) => `  \\\n    ${key} "${value}"`).join('')
     const tokenLine = wizToken ? '  \\\n    token "<oauth>"  config_is_local false' : ''
-    return `config create "${remoteSlug}" ${wizType}${entered}${tokenLine}`
-  }, [wizType, providerCfg, wizFields, wizToken, remoteSlug])
+    return `config create "${remoteSlug}" ${wizType}${fixed}${entered}${tokenLine}`
+  }, [wizType, providerCfg, wizFields, wizToken, remoteSlug, wizFixed])
 
   // Whether step 2 is satisfied: OAuth needs a captured token; key providers
   // need every non-optional field filled.
@@ -2234,7 +2287,7 @@ function App() {
     if (!wizType) return
     setWizTest({ state: 'busy' })
     api
-      .testRemote(buildConnString(wizType, wizFields))
+      .testRemote(buildConnString(wizType, { ...wizFixed, ...wizFields }))
       .then((res) => setWizTest(res.ok ? { state: 'ok' } : { state: 'fail', msg: res.message }))
       .catch((err) => setWizTest({ state: 'fail', msg: err instanceof Error ? err.message : String(err) }))
   }
@@ -2248,9 +2301,12 @@ function App() {
     }
     if (!wizType || !providerCfg) return
     withBusy('wizard', async () => {
-      const options = providerCfg.fields
-        .filter((f) => (wizFields[f.key] || '').trim())
-        .map((f) => ({ key: f.key, value: wizFields[f.key].trim() }))
+      const options = [
+        ...Object.entries(wizFixed).map(([key, value]) => ({ key, value })),
+        ...providerCfg.fields
+          .filter((f) => (wizFields[f.key] || '').trim())
+          .map((f) => ({ key: f.key, value: wizFields[f.key].trim() })),
+      ]
       const remote: RemoteDraft = {
         name: remoteSlug,
         type: wizType,
@@ -2810,14 +2866,33 @@ function App() {
                       onChange={(e) => setWizFilter(e.target.value)}
                       placeholder={t.providerSearch}
                     />
+                    {filteredBackendTypes.length > 0 && <h4 className="sd-provgroup__title">{t.provServices}</h4>}
                     <div className="sd-provgrid">
                       {filteredBackendTypes.map((p) => (
-                        <button key={p.id} className={`sd-prov${wizType === p.id ? ' is-active' : ''}`} onClick={() => setWizType(p.id)}>
+                        <button key={p.id} className={`sd-prov${wizType === p.id && !wizPreset ? ' is-active' : ''}`} onClick={() => chooseBackend(p.id)}>
                           <span className="sd-prov__icon"><ProviderGlyph id={p.id} size={24} /></span>
                           <span className="sd-prov__name">{providerName(p)}</span>
                         </button>
                       ))}
                     </div>
+                    {PRESETS.groups.map((group) => {
+                      const items = presetMatches.filter((item) => item.group === group.id && backendTypes.some((b) => b.id === item.backend))
+                      if (!items.length) return null
+                      return (
+                        <div key={group.id} className="sd-provgroup">
+                          <h4 className="sd-provgroup__title">{localized(group.label, language)}</h4>
+                          <div className="sd-provgrid">
+                            {items.map((item) => (
+                              <button key={item.id} className={`sd-prov${wizPreset === item.id ? ' is-active' : ''}`} onClick={() => choosePreset(item)}>
+                                <span className="sd-prov__icon"><ProviderGlyph id={item.icon ?? item.backend} size={24} /></span>
+                                <span className="sd-prov__name">{localized(item.name, language)}</span>
+                                <span className="sd-prov__tag">{presetTag(item, language)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
                 {wizStep === 2 && providerCfg && (
@@ -2868,7 +2943,7 @@ function App() {
                     <p className="sd-wiz__prompt">{t.wizReviewPrompt}</p>
                     {[
                       { k: t.wizName, v: wizNameFinal },
-                      { k: t.wizType, v: wizBackend ? providerName(wizBackend) : '' },
+                      { k: t.wizType, v: wizTypeLabel },
                       { k: t.wizRemote, v: `${remoteSlug}:` },
                       ...(providerCfg?.oauth && wizToken ? [{ k: 'OAuth', v: t.wizAuthorized }] : []),
                     ].map((r) => (

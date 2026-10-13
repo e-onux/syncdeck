@@ -177,6 +177,9 @@ struct BackendOption: Identifiable, Hashable, Sendable {
     struct Example: Hashable, Sendable {
         var value: String
         var help: String
+        /// rclone ≥1.72 puts the provider filter on each example instead of
+        /// repeating the option per provider.
+        var provider: String = ""
     }
 
     var name: String
@@ -188,7 +191,9 @@ struct BackendOption: Identifiable, Hashable, Sendable {
     var defaultValue: String
     var exclusive: Bool
     var examples: [Example]
-    var id: String { name }
+    /// rclone provider filter ("AWS", "!AWS,Ceph"); empty = every provider.
+    var provider: String = ""
+    var id: String { "\(name)|\(provider)" }
 
     var shortHelp: String {
         help.components(separatedBy: .newlines).first?.trimmingCharacters(in: .whitespaces) ?? ""

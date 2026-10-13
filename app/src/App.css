@@ -348,6 +348,9 @@ ion-app, .ion-page { background: var(--bg); }
 .sd-prov__icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; color: var(--ink-dim); }
 .sd-prov.is-active .sd-prov__icon { color: var(--accent); }
 .sd-prov__name { font-size: .84rem; font-weight: 600; color: var(--ink); text-align: left; }
+.sd-prov__tag { margin-top: -6px; font-size: .72rem; color: var(--ink-dim); text-align: left; }
+.sd-provgroup { margin-top: 18px; }
+.sd-provgroup__title { margin: 0 0 8px; font-size: .74rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); }
 .sd-wiz__form { display: flex; flex-direction: column; gap: 18px; }
 .sd-wiz__note { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-soft); border-radius: var(--r-sharp); background: var(--surface); font-size: .76rem; color: var(--ink-dim); line-height: 1.5; }
 .sd-wiz__note-icon { color: var(--accent); flex: none; display: flex; }

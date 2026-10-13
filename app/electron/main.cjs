@@ -614,10 +614,14 @@ async function listBackendTypes(rclonePath = findRclone()) {
                 advanced: Boolean(option.Advanced),
                 secret: Boolean(option.IsPassword || option.Sensitive),
                 type: String(option.Type || 'string'),
+                // Some options exist once per provider (s3 "region", "endpoint");
+                // the wizard picks the variant for the chosen service.
+                provider: String(option.Provider || ''),
                 examples: Array.isArray(option.Examples)
                   ? option.Examples.map((example) => ({
                       value: String(example.Value || ''),
                       help: String(example.Help || ''),
+                      provider: String(example.Provider || ''),
                     }))
                   : [],
               }))

@@ -35,6 +35,12 @@ To make macOS downloads open with no command, build with an Apple Developer ID. 
   from `--use-json-log`, plus a readable live log and a working **Stop** button
   (`sync:cancel`).
 - Native folder picker for local paths; cloud file picker via `rclone lsjson`.
+- Well-known services on standard protocols listed by name in the client
+  wizard (Wasabi, Cloudflare R2, MinIO, Hetzner, Nextcloud, ownCloud,
+  Synology NAS and 50 more), from the catalogue shared with the iPhone app in
+  `sources/provider-presets.json`. Each maps to an rclone backend with fixed
+  settings; `npm run check:presets` (CI: `presets.yml`) verifies it against
+  rclone.
 - Client wizard that creates real remotes:
   - Per-provider field schemas for S3, B2, SFTP, WebDAV, and an encrypted
     `crypt` remote, passwords stored obscured (`--obscure`).

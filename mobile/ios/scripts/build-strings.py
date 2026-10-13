@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Builds SyncDeck/Localizable.xcstrings from scripts/translations.tsv.
+"""Builds SyncDeck/Localizable.xcstrings from scripts/translations.tsv and
+copies the shared provider presets catalogue into the app.
 
 The English source strings are the keys used in the Swift code. Add a row to
 the TSV (tab separated, one column per language) when adding UI text, then run
@@ -12,6 +13,8 @@ import pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TSV = ROOT / "scripts" / "translations.tsv"
 OUT = ROOT / "SyncDeck" / "Localizable.xcstrings"
+PRESETS_SRC = ROOT.parent.parent / "sources" / "provider-presets.json"
+PRESETS_OUT = ROOT / "SyncDeck" / "provider-presets.json"
 KEEP = {"", "%@:", "%lld%%", "rclone.org", "sidrelabs.com/syncdeck", '--exclude "*.tmp" --transfers 2'}
 
 
@@ -40,6 +43,11 @@ def main() -> None:
     catalog = {"sourceLanguage": "en", "strings": dict(sorted(strings.items())), "version": "1.0"}
     OUT.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"{len(strings)} strings x {len(languages)} languages -> {OUT.relative_to(ROOT)}")
+
+    # The well-known services catalogue is shared with the desktop app; the
+    # app bundle gets a copy (SyncDeckTests checks it matches the source).
+    PRESETS_OUT.write_bytes(PRESETS_SRC.read_bytes())
+    print(f"{PRESETS_SRC.name} -> {PRESETS_OUT.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

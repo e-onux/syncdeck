@@ -31,9 +31,13 @@ export type BackendOption = {
   advanced: boolean;
   secret: boolean;
   type: string;
+  /** rclone provider filter, e.g. "AWS" or "!AWS,Ceph"; empty = all. */
+  provider?: string;
   examples?: Array<{
     value: string;
     help: string;
+    /** Per-example provider filter (rclone ≥1.72). */
+    provider?: string;
   }>;
 };
 

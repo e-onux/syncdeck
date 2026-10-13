@@ -1,0 +1,49 @@
+name: Provider presets
+
+# Checks the well-known services list (sources/provider-presets.json) against
+# rclone: the version the apps bundle, and upstream's current release so a
+# provider renamed or dropped upstream shows up here before an engine update
+# ships it. Runs on changes and weekly.
+
+on:
+  push:
+    paths:
+      - 'sources/provider-presets.json'
+      - 'app/scripts/check-presets.mjs'
+      - 'app/rclone.version'
+      - '.github/workflows/presets.yml'
+  pull_request:
+    paths:
+      - 'sources/provider-presets.json'
+      - 'app/scripts/check-presets.mjs'
+      - 'app/rclone.version'
+  schedule:
+    - cron: '41 6 * * 1' # Mondays
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: rclone ${{ matrix.channel }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [bundled, current]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download rclone
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.channel }}" = bundled ]; then
+            V=$(tr -d '[:space:]' < app/rclone.version)
+            URL="https://downloads.rclone.org/v$V/rclone-v$V-linux-amd64.zip"
+          else
+            URL="https://downloads.rclone.org/rclone-current-linux-amd64.zip"
+          fi
+          curl -fsSL --retry 5 -o rclone.zip "$URL"
+          unzip -q -j rclone.zip '*/rclone' -d "$RUNNER_TEMP"
+      - name: Check presets
+        run: node app/scripts/check-presets.mjs "$RUNNER_TEMP/rclone"
