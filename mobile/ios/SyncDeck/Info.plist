@@ -23,10 +23,10 @@
 	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SyncDeck backs up your photos and videos to your cloud and, if you choose, removes them from this iPhone once they are safely stored there.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>SyncDeck connects to servers on your local network (SFTP, SMB, WebDAV, FTP) when a client points at one.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SyncDeck backs up your photos and videos to your cloud and, if you choose, removes them from this iPhone once they are safely stored there.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
@@ -34,5 +34,10 @@
 	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 </dict>
 </plist>

@@ -2,11 +2,31 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tab: Tab = .profiles
+    @State private var splash = true
 
     enum Tab: Hashable { case profiles, clients, settings }
 
     var body: some View {
+        content
+            .overlay {
+                if splash {
+                    SplashView().transition(.opacity)
+                }
+            }
+            .task {
+                // Play the animation through, then wait (briefly) for the engine
+                // so the app does not open on the "starting" placeholder.
+                try? await Task.sleep(for: reduceMotion ? .milliseconds(600) : SplashView.duration)
+                for _ in 0..<40 where !store.engineReady {
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
+                withAnimation(.easeOut(duration: 0.35)) { splash = false }
+            }
+    }
+
+    private var content: some View {
         Group {
             if store.engineReady {
                 TabView(selection: $tab) {
