@@ -363,5 +363,18 @@ final class EngineIntegrationTests: XCTestCase {
         p.enabled = false
         store.upsert(p)
         XCTAssertTrue(store.dueProfiles(now: Date().addingTimeInterval(3600)).isEmpty)
+
+        // A photo profile still being set up (no destination) never runs on
+        // its own, and running it by hand explains why in plain words.
+        var draft = SyncProfile(name: "unfinished")
+        draft.source = .photos
+        draft.photo = PhotoOptions()
+        draft.intervalMinutes = 1440
+        store.upsert(draft)
+        XCTAssertFalse(store.dueProfiles().contains { $0.id == draft.id })
+        XCTAssertNil(store.nextDueDate().flatMap { _ in store.dueProfiles().first { $0.id == draft.id } })
+        let ok = await runner.run(draft)
+        XCTAssertFalse(ok)
+        XCTAssertEqual(store.lastRun(draft.id)?.message, SyncRunner.PhotoBackupError.notCloud.localizedDescription)
     }
 }

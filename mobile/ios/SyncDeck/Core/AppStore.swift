@@ -163,6 +163,8 @@ final class AppStore {
     func dueProfiles(now: Date = Date()) -> [SyncProfile] {
         state.profiles.filter { profile in
             guard profile.enabled, profile.intervalMinutes > 0 else { return false }
+            // A profile still being set up (no destination yet) must not run on its own.
+            guard !profile.source.isEmpty, !profile.destination.isEmpty else { return false }
             guard let last = lastRun(profile.id)?.finishedAt else { return true }
             return now.timeIntervalSince(last) >= Double(profile.intervalMinutes * 60)
         }
@@ -171,7 +173,7 @@ final class AppStore {
     /// The earliest moment a scheduled profile becomes due, for BGTaskScheduler.
     func nextDueDate(now: Date = Date()) -> Date? {
         state.profiles
-            .filter { $0.enabled && $0.intervalMinutes > 0 }
+            .filter { $0.enabled && $0.intervalMinutes > 0 && !$0.source.isEmpty && !$0.destination.isEmpty }
             .map { profile -> Date in
                 guard let last = lastRun(profile.id)?.finishedAt else { return now }
                 return last.addingTimeInterval(Double(profile.intervalMinutes * 60))

@@ -91,10 +91,12 @@ enum Friendly {
 /// A friendly error line with the raw rclone text folded away.
 struct ErrorDetail: View {
     let raw: String
+    /// Use this instead of interpreting `raw` when the app already knows why.
+    var message: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(Friendly.error(raw))
+            Text(message ?? Friendly.error(raw))
                 .font(.footnote)
                 .foregroundStyle(.red)
             DisclosureGroup {

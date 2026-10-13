@@ -271,7 +271,7 @@ struct ProfileDetailView: View {
             Section("Last run") {
                 RunRecordRow(record: last)
                 if !last.ok {
-                    ErrorDetail(raw: last.output)
+                    ErrorDetail(raw: last.output, message: last.message)
                 }
             }
         } else {
@@ -423,7 +423,7 @@ struct RunRecordRow: View {
 
     private var summary: String {
         let s = record.stats
-        if !record.ok { return Friendly.error(record.output) }
+        if !record.ok { return record.message ?? Friendly.error(record.output) }
         if s.photosVerified > 0 || s.photosRemoved > 0 {
             var parts = [String(localized: "\(s.photosVerified) backed up")]
             if s.photosRemoved > 0 { parts.append(String(localized: "\(s.photosRemoved) removed")) }

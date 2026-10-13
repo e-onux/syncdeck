@@ -121,13 +121,21 @@ final class SyncRunner {
         let stopped = stopRequested.contains(profile.id)
         let message = stopped ? String(localized: "Stopped by user.") : error.localizedDescription
         let log = running[profile.id]?.log ?? []
-        return RunRecord(
+        var record = RunRecord(
             ok: false,
             output: (log + [message]).joined(separator: "\n"),
             finishedAt: Date(),
             stats: stats(from: running[profile.id]),
             dryRun: RcloneArgs.rcOptions(from: profile.extraArgs).config["DryRun"] as? Bool ?? false
         )
+        // The app's own errors are already written for people; only rclone's
+        // output needs interpreting.
+        if stopped {
+            record.message = String(localized: "Stopped.")
+        } else if !(error is EngineError) {
+            record.message = error.localizedDescription
+        }
+        return record
     }
 
     private func stats(from progress: RunProgress?) -> RunStats {

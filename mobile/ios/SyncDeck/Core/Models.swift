@@ -153,6 +153,9 @@ struct RunRecord: Codable, Identifiable, Hashable, Sendable {
     var stats: RunStats = RunStats()
     var dryRun: Bool = false
     var trigger: Trigger = .manual
+    /// A plain-language reason written by the app itself (e.g. "choose a
+    /// destination"), shown instead of interpreting rclone's output.
+    var message: String?
 
     enum Trigger: String, Codable, Sendable {
         case manual, scheduled, background

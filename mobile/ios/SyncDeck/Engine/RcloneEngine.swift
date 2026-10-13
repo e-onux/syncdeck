@@ -82,7 +82,9 @@ extension RcloneEngine {
     /// "1.74.4" from "v1.74.4".
     func version() async -> String? {
         guard let out = try? await call("core/version"), let raw = out["version"] as? String else { return nil }
-        return raw.hasPrefix("v") ? String(raw.dropFirst()) : raw
+        // Library builds report e.g. "v1.75.2-DEV"; people only need the release.
+        let trimmed = raw.hasPrefix("v") ? String(raw.dropFirst()) : raw
+        return trimmed.replacingOccurrences(of: "-DEV", with: "")
     }
 
     func obscure(_ clear: String) async throws -> String {
